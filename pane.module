@@ -1,0 +1,141 @@
+<?php
+
+/**
+ * Implements hook_init().
+ */
+function pane_init() {
+  drupal_add_js(drupal_get_path('module', 'pane') .'/pane.js');
+}
+
+/**
+ * Implements hook_menu().
+ */
+function pane_menu() {
+  $items = array();
+
+  $items['admin/config/system/pane'] = array(
+    'title' => 'Panes',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('variable_group_form', 'pane'),
+    'access arguments' => array('administer panes'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['admin/config/system/pane/list'] = array(
+    'title' => 'List',
+    'access arguments' => array('administer panes'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items['admin/config/system/pane/available'] = array(
+    'title' => 'Available',
+    'access arguments' => array('administer pane settings'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('variable_group_form', 'pane_settings'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -5,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function pane_permission() {
+  return array(
+    'administer pane settings' => array(
+      'title' => t('Administer pane settings'),
+      'description' => t('Administer pane settings'),
+    ),
+    'administer panes' => array(
+      'title' => t('Edit pane content'),
+      'description' => t('Edit pane content'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_ctools_plugin_directory().
+ */
+function pane_ctools_plugin_directory($owner, $plugin_type) {
+  if ($owner == 'ctools' && $plugin_type == 'content_types') {
+    return 'plugins/content_types';
+  }
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function pane_block_info() {
+  $block = array();
+  foreach (pane_get_panes() as $id => $pane) {
+    $block[$id] = array(
+      'info' => "Pane - $pane - block",
+      'cache' => DRUPAL_CACHE_GLOBAL,
+    );
+  }
+  return $block;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function pane_block_view($delta = '') {
+  $variable = $delta .'_[pane_part]';
+  $content = pane_load_pane($variable);
+  $block = array();
+  if (!empty($content['title'])) {
+    $block['subject'] = $content['title'];
+  }
+  if (!empty($content['body']['value'])) {
+    $block['content'] = array(
+      '#markup' => $content['body']['value'],
+    );
+  }
+  return $block;
+}
+
+function pane_contextual_links_view_alter(&$element, &$items) {
+  if (isset($element['#element']['#block']) && $element['#element']['#block']->module == 'pane') {
+    if (user_access('administer panes')) {
+      $variable = $element['#element']['#block']->delta .'_[pane_part]';
+      $search = array('_', '[', ']');
+      $replace = array('-', '', '');
+      $pane = str_replace($search, $replace, $variable);
+      $element['#links']['edit-pane'] = array(
+        'title' => t('Edit content'),
+        'href' => url('admin/config/system/pane/'. $pane, array('absolute' => TRUE)),
+      );
+    }
+  }
+}
+
+/**
+ * Returns an array of available custom translatable panes
+ */
+function pane_get_panes() {
+  $panes = array();
+  $pane_panes = variable_get('pane_panes', NULL);
+  $pane_panes = explode("\n", $pane_panes);
+  foreach ($pane_panes as $item) {
+    $parts = explode('|', $item);
+    $panes['pane_'. $parts[0]] = $parts[1];
+  }
+  asort($panes);
+  return $panes;
+}
+
+/**
+ * Load a pane and perform token replacement
+ */
+function pane_load_pane($name) {
+  if ($content = variable_get_value($name)) {
+    if (!empty($content['title'])) {
+      $content['title'] = token_replace($content['title']);
+    }
+    if (!empty($content['body'])) {
+      $content['body']['value'] = token_replace($content['body']['value']);
+    }
+    return $content;
+  }
+}
