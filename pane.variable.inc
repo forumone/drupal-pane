@@ -2,6 +2,10 @@
 
 /**
  * Implements hook_variable_info().
+ * 
+ * @param array $options
+ * 
+ * @return array
  */
 function pane_variable_info($options) {
   $variables = array();
@@ -26,6 +30,8 @@ function pane_variable_info($options) {
 
 /**
  * Implements hook_variable_group_info().
+ * 
+ * @return array
  */
 function pane_variable_group_info() {
   $groups = array();
@@ -45,6 +51,8 @@ function pane_variable_group_info() {
 
 /**
  * Implements hook_variable_type_info().
+ * 
+ * @return array
  */
 function pane_variable_type_info() {
   $type = array();
@@ -64,6 +72,11 @@ function pane_variable_type_info() {
 
 /**
  * Helper that builds pane content form element grouping
+ * 
+ * @param array $variable
+ * @param array $options
+ * 
+ * @return array
  */
 function pane_build_pane_content($variable, $options = array()) {
   $name = str_replace('[pane_part]', '', $variable['name']);
@@ -75,6 +88,10 @@ function pane_build_pane_content($variable, $options = array()) {
 
 /**
  * Implements hook_variable_settings_form_alter().
+ * 
+ * @param array $form
+ * @param array $form_state
+ * @param string $form_id
  */
 function pane_variable_settings_form_alter(&$form, &$form_state, $form_id) {
   // Insert variables into vertical tabs
@@ -98,6 +115,9 @@ function pane_variable_settings_form_alter(&$form, &$form_state, $form_id) {
 /**
  * Delete variable cache after updating pane_settings form
  * Make all panes translatable if i18n_variable enabled
+ * 
+ * @param array $form
+ * @param array $form_state
  */
 function pane_settings_form_submit(&$form, &$form_state) {
   if (module_exists('i18n_variable')) {
