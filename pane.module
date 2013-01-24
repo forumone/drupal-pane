@@ -9,24 +9,26 @@ function pane_init() {
 
 /**
  * Implements hook_menu().
+ *
+ * @return array
  */
 function pane_menu() {
   $items = array();
 
-  $items['admin/config/system/pane'] = array(
+  $items['admin/structure/system/pane'] = array(
     'title' => 'Panes',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('variable_group_form', 'pane'),
     'access arguments' => array('administer panes'),
     'type' => MENU_NORMAL_ITEM,
   );
-  $items['admin/config/system/pane/list'] = array(
+  $items['admin/structure/system/pane/list'] = array(
     'title' => 'List',
     'access arguments' => array('administer panes'),
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
   );
-  $items['admin/config/system/pane/available'] = array(
+  $items['admin/structure/system/pane/available'] = array(
     'title' => 'Available',
     'access arguments' => array('administer pane settings'),
     'page callback' => 'drupal_get_form',
@@ -40,6 +42,8 @@ function pane_menu() {
 
 /**
  * Implements hook_permission().
+ *
+ * @return array
  */
 function pane_permission() {
   return array(
@@ -56,6 +60,11 @@ function pane_permission() {
 
 /**
  * Implements hook_ctools_plugin_directory().
+ *
+ * @param string $owner
+ * @param string $plugin_type
+ * 
+ * @return string
  */
 function pane_ctools_plugin_directory($owner, $plugin_type) {
   if ($owner == 'ctools' && $plugin_type == 'content_types') {
@@ -65,6 +74,8 @@ function pane_ctools_plugin_directory($owner, $plugin_type) {
 
 /**
  * Implements hook_block_info().
+ *
+ * @return array
  */
 function pane_block_info() {
   $block = array();
@@ -79,6 +90,10 @@ function pane_block_info() {
 
 /**
  * Implements hook_block_view().
+ *
+ * @param string $delta
+ * 
+ * @return array
  */
 function pane_block_view($delta = '') {
   $variable = $delta .'_[pane_part]';
@@ -95,6 +110,12 @@ function pane_block_view($delta = '') {
   return $block;
 }
 
+/**
+ * Implements hook_contextual_links_view_alter to add contextual links for Panes
+ * 
+ * @param array $element
+ * @param array $items
+ */
 function pane_contextual_links_view_alter(&$element, &$items) {
   if (isset($element['#element']['#block']) && $element['#element']['#block']->module == 'pane') {
     if (user_access('administer panes')) {
@@ -112,6 +133,8 @@ function pane_contextual_links_view_alter(&$element, &$items) {
 
 /**
  * Returns an array of available custom translatable panes
+ * 
+ * @return array
  */
 function pane_get_panes() {
   $panes = array();
@@ -127,6 +150,9 @@ function pane_get_panes() {
 
 /**
  * Load a pane and perform token replacement
+ * 
+ * @param string
+ * @return array
  */
 function pane_load_pane($name) {
   if ($content = variable_get_value($name)) {
