@@ -1,50 +1,77 @@
 <?php
 
+/**
+ * CTools content type definition
+ */
 $plugin = array(
-  'title' => t('TCustom text pane'),
-  'description' => t('Displays a custom text pane'),
-  'single' => TRUE,
-  'render callback' => 'pane_render',
-  'edit form' => 'pane_edit_form',
-  'admin title' => 'pane_admin_title',
-  'admin info' => 'pane_admin_info',
-  'category' => array(t('Custom Panes'), 0),
+  'title' => t('Custom text pane'),
+  'content type' => 'pane_pane_content_type_content_type',
 );
+
+/**
+ * List of Pane content types
+ * 
+ * @return array
+ */
+function pane_pane_content_type_content_types() {
+  $types = array();
+  
+  foreach (pane_get_containers() as $container) {
+    $info = array(
+      'title' => $container->title,
+      'category' => t('Custom panes'),
+    );
+    
+    $types[$container->name] = $info;
+  }
+  
+  return $types;
+}
+
+/**
+ * Information about a particular pane content type
+ * 
+ * @param string $subtype_id
+ * 
+ * @return array
+ */
+function pane_pane_content_type_content_type($subtype_id) {
+  $container = pane_load_container($subtype_id);
+  $info = array();
+  
+  if (FALSE !== $container) {
+    $info = array(
+      'title' => $container->title,
+      'category' => t('Custom panes'),  
+    );
+  }
+  
+  return $info;
+}
 
 /**
  * Renderer for Pane
  * 
- * @param string $subtype
+ * @param string $subtype_id
  * @param array $conf
  * @param array $args
  * @param array $contexts
  * 
  * @return stdClass
  */
-function pane_render($subtype, $conf, $args, $contexts) {
-  $content = pane_load_pane($conf['content']);
+function pane_pane_content_type_render($subtype_id, $conf, $args, $contexts) {
+  $container = pane_load_container($subtype_id);
+
   $block = new stdClass;
 
-  if (!empty($content['title'])) {
-    $block->title = $content['title'];
-  }
-  if (!empty($content['body'])) {
+  if (FALSE !== $container) {
+    $pane = pane_get_data($container);
+    $block->title = $container->title;
+    
     $block->content = array(
-      '#markup' => check_markup($content['body']['value'], $content['body']['format']),
-      '#prefix' => '<div class = "'. str_replace('_', '-', substr($conf['content'], 0, -12)) .'">',
+      '#markup' => $pane->render(),
+      '#prefix' => '<div class = "'. str_replace('_', '-', substr($container->name, 0, -12)) .'">',
       '#suffix' => '</div>',
-    );
-  }
-
-  if (user_access('administer panes')) {
-    $search = array('_', '[', ']');
-    $replace = array('-', '', '');
-    $fieldset_id = str_replace($search, $replace, $conf['content']);
-    $block->admin_links = array(
-      array(
-        'title' => t('Edit content'),
-        'href' => "admin/config/system/pane/$fieldset_id",
-      ),
     );
   }
 
@@ -61,8 +88,13 @@ function pane_render($subtype, $conf, $args, $contexts) {
  * @return string
  */
 function pane_admin_title($subtype, $conf, $context = NULL) {
-  $variable = variable_get_info($conf['content']);
-  return t('Custom pane (%title)', array('%title' => $variable['title']));
+  $pane = pane_load_pane($conf['content']);
+  
+  if (FALSE !== $pane) {
+    return t('Custom pane (%title)', array('%title' => $pane->title));
+  }
+  
+  return NULL;
 }
 
 /**
@@ -86,22 +118,11 @@ function pane_admin_info($subtype, $conf, $context = NULL) {
  * 
  * @return array
  */
-function pane_edit_form($form, &$form_state) {
-  $conf = $form_state['conf'];
-
-  foreach (pane_get_panes() as $id => $title) {
-    $options[$id .'_[pane_part]'] = $title;
-  }
-
-  $form['content'] = array(
-    '#type' => 'select',
-    '#title' => t('Select the content for this pane'),
-    '#options' => $options,
-    '#default_value' => $conf['content'],
-  );
-
-  return $form;
-
+function pane_pane_content_type_edit_form($form, &$form_state) {
+  $container = pane_load_container($form_state['subtype_name']);
+  $plugin = pane_get_data($container);
+  
+  return $plugin->edit_form($form, $form_state);
 }
 
 /**
@@ -110,6 +131,9 @@ function pane_edit_form($form, &$form_state) {
  * @param array $form
  * @param array $form_state
  */
-function pane_edit_form_submit(&$form, &$form_state) {
-  $form_state['conf']['content'] = $form_state['values']['content'];
+function pane_pane_content_type_edit_form_submit(&$form, &$form_state) {
+  $container = pane_load_container($form_state['subtype_name']);
+  $plugin = pane_get_data($container);
+  $plugin->edit_form_submit($form, $form_state);
+  $plugin->save();
 }

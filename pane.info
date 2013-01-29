@@ -1,5 +1,3 @@
 name = Pane
 description = Translatable custom panel panes
 core = 7.x
-
-dependencies[] = variable
