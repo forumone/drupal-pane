@@ -149,7 +149,9 @@ function pane_panes_list($form, &$form_state) {
  * @return boolean
  */
 function pane_machine_name_exists($value) {
-  return FALSE;
+  $container = pane_load_container($value);
+  
+  return (FALSE != $container);
 }
 
 /**
