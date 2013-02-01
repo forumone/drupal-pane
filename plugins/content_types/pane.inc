@@ -21,8 +21,8 @@ function pane_pane_content_type_content_types() {
       'title' => $container->title,
       'category' => t('Custom panes'),
     );
-    
-    $types[$container->name] = $info;
+
+    $types[$container->container] = $info;
   }
   
   return $types;
@@ -60,17 +60,16 @@ function pane_pane_content_type_content_type($subtype_id) {
  * @return stdClass
  */
 function pane_pane_content_type_render($subtype_id, $conf, $args, $contexts) {
-  $container = pane_load_container($subtype_id);
+  $pane = pane_load_container($subtype_id);
 
   $block = new stdClass;
 
-  if (FALSE !== $container) {
-    $pane = pane_get_data($container);
-    $block->title = $container->title;
-    
+  if (FALSE !== $pane) {
+    $block->title = $pane->title;
+
     $block->content = array(
       '#markup' => $pane->render(),
-      '#prefix' => '<div class = "'. str_replace('_', '-', substr($container->name, 0, -12)) .'">',
+      '#prefix' => '<div class = "'. str_replace('_', '-', substr($pane->container, 0, -12)) .'">',
       '#suffix' => '</div>',
     );
   }
@@ -120,9 +119,7 @@ function pane_admin_info($subtype, $conf, $context = NULL) {
  */
 function pane_pane_content_type_edit_form($form, &$form_state) {
   $container = pane_load_container($form_state['subtype_name']);
-  $plugin = pane_get_data($container);
-  
-  return $plugin->edit_form($form, $form_state);
+  return $container->data_edit_form($form, $form_state);
 }
 
 /**
@@ -133,7 +130,6 @@ function pane_pane_content_type_edit_form($form, &$form_state) {
  */
 function pane_pane_content_type_edit_form_submit(&$form, &$form_state) {
   $container = pane_load_container($form_state['subtype_name']);
-  $plugin = pane_get_data($container);
-  $plugin->edit_form_submit($form, $form_state);
-  $plugin->save();
+  $container->data_edit_form_submit($form, $form_state);
+  $container->save_data();
 }

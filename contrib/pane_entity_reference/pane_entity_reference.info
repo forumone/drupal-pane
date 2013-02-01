@@ -1,0 +1,6 @@
+name = Pane Entity Reference
+description = Entity reference pane
+core = 7.x
+
+dependencies[] = pane
+dependencies[] = entityreference

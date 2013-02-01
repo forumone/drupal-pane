@@ -1,13 +1,13 @@
 <?php
 class pane_text extends pane_base {
   /**
-   * Provides the edit form
+   * Provides the dataedit form
    * 
-   * @see pane_base::edit_form()
+   * @see pane_base::data_edit_form()
    * 
    * @return array
    */
-  public function edit_form($form = array(), &$form_state = array()) {
+  public function data_edit_form($form = array(), &$form_state = array()) {
     $form['description'] = array(
       '#type' => 'text_format',
       '#title' => t('Description'),
@@ -21,9 +21,9 @@ class pane_text extends pane_base {
   /**
    * Saves the form data
    * 
-   * @see pane_base::edit_form_submit()
+   * @see pane_base::data_edit_form_submit()
    */
-  public function edit_form_submit(&$form, &$form_state) {
+  public function data_edit_form_submit(&$form, &$form_state) {
     $this->data = $form_state['values']['description'];
   }
   
@@ -42,5 +42,13 @@ class pane_text extends pane_base {
     }
     
     return $text;
+  }
+  
+  public function container_edit_form(&$form_state = array()) {
+    return array();
+  }
+  
+  public function container_edit_form_submit(&$form_state) {
+    // Do nothing
   }
 }

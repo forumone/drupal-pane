@@ -4,7 +4,7 @@
  */
 function pane_schema() {
   $schema = array();
-  
+
   $schema['pane_container'] = array(
     'export' => array(
       'key' => 'name',
@@ -40,10 +40,17 @@ function pane_schema() {
         'length' => 255,
         'not null' => TRUE
       ),
+      'configuration' => array(
+        'description' => 'The configuration for the container',
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => TRUE,
+        'serialize' => TRUE,
+      ),
     ),
     'primary key' => array('name'),
   );
-  
+
   $schema['pane_data'] = array(
     'export' => array(
       'key' => 'name',
@@ -74,12 +81,30 @@ function pane_schema() {
       'data' => array(
         'description' => 'The data for the pane',
         'type' => 'text',
-        'length' => 255,
-        'not null' => TRUE
+        'size' => 'big',
+        'not null' => TRUE,
+        'serialize' => TRUE,
       ),
     ),
     'primary key' => array('name'),
   );
-  
+
   return $schema;
+}
+
+/**
+ * Adds configuration for containers
+ */
+function pane_update_7201() {
+  $return = array();
+
+  db_add_field('pane_container', 'configuration', array(
+    'description' => 'The configuration for the container',
+    'type' => 'text',
+    'size' => 'big',
+    'not null' => TRUE,
+    'serialize' => TRUE,
+  ));
+
+  return $return;
 }

@@ -3,6 +3,37 @@ abstract class pane_base {
   protected $data;
   protected $lang;
   protected $container;
+  protected $configuration;
+  protected $plugin;
+  protected $title;
+  protected $description;
+  
+  public function __get($name) {
+    return (TRUE === isset($this->{$name})) ? $this->{$name} : NULL;
+  }
+  
+  public function setPlugin($plugin) {
+    $this->plugin = (string) $plugin;
+    return $this;
+  }
+  
+  public function getPlugin() {
+    return $this->plugin;
+  }
+  
+  public function setTitle($title) {
+    $this->title = (string) $title;
+    return $this;
+  }
+  
+  public function getTitle() {
+    return $this->title;
+  }
+  
+  public function setDescription($description) {
+    $this->description = (string) $description;
+    return $this;
+  }
   
   /**
    * Setter for the pane data
@@ -23,6 +54,15 @@ abstract class pane_base {
    */
   public function getData() {
     return $this->data;
+  }
+  
+  public function setConfiguration($configuration) {
+    $this->configuration = $configuration;
+    return $this;
+  }
+  
+  public function getConfiguration() {
+    return $this->configuration;
   }
   
   /**
@@ -72,10 +112,11 @@ abstract class pane_base {
    * 
    * @return pane_base
    */
-  public function save() {
-    $current_data = $this->load_data();
-    $current_data->data = serialize($this->data);
-    $current_data->name = $current_data->container . '_' . $current_data->lang;
+  public function save_data() {
+    $current_data = $this->fetch_data();
+    $current_data->name = $this->container . '_' . $current_data->lang;
+    $current_data->data = $this->data;
+    $current_data->container = $this->container;
     
     ctools_export_crud_save('pane_data', $current_data);
     
@@ -87,8 +128,8 @@ abstract class pane_base {
    * 
    * @return pane_base
    */
-  public function load() {
-    $current_data = $this->load_data();
+  public function load_data() {
+    $current_data = $this->fetch_data();
     $this->data = $current_data->data;
 
     return $this;
@@ -99,16 +140,13 @@ abstract class pane_base {
    * 
    * @return array
    */
-  protected function load_data() {
+  protected function fetch_data() {
     ctools_include('export');
     
     $current_data = ctools_export_load_object('pane_data', 'conditions', array('container' => $this->container, 'lang' => $this->lang));
     
     if (0 < sizeof($current_data)) {
       $current_data = array_shift($current_data);
-      if (0 < sizeof($current_data->data)) {
-        $current_data->data = unserialize($current_data->data);
-      }
     }
     else {
       $current_data = ctools_export_crud_new('pane_data');
@@ -120,23 +158,45 @@ abstract class pane_base {
   }
   
   /**
-   * Signature for edit form
+   * Signature for data edit form
    * 
    * @param array $form
    * @param array $form_state
+   * 
+   * @return array
    */
-  public abstract function edit_form($form = array(), &$form_state = array());
+  public abstract function data_edit_form($form = array(), &$form_state = array());
   
   /**
-   * Signature for edit form submit function
+   * Signature for data edit form submit function
    * 
    * @param array $form
    * @param array $form_state
    */
-  public abstract function edit_form_submit(&$form, &$form_state);
+  public abstract function data_edit_form_submit(&$form, &$form_state);
   
   /**
    * Signature for pane rendering
+   * 
+   * @return string
    */
   public abstract function render();
+  
+  /**
+   * Signature for container edit form
+   * 
+   * @param array $form
+   * @param array $form_state
+   * 
+   * @return array
+   */
+  public abstract function container_edit_form(&$form_state = array());
+  
+  /**
+   * Signature for container edit form submit function
+   *
+   * @param array $form
+   * @param array $form_state
+   */
+  public abstract function container_edit_form_submit(&$form_state);
 }
