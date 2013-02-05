@@ -4,7 +4,7 @@ class pane_entity_reference extends pane_base {
   const BY_VIEW = 'view';
   
   /**
-   * Provides the dataedit form
+   * Provides the data edit form
    * 
    * @see pane_base::data_edit_form()
    * 
@@ -170,13 +170,30 @@ class pane_entity_reference extends pane_base {
   public function render() {
     $text = '';
     
-    if (TRUE === isset($this->data['value'])) {
-      $text = check_markup($this->data['value'], $this->data['format']);
+    if (TRUE === isset($this->data['ids'])) {
+      $entity_ids = array();
+
+      foreach ($this->data['ids'] as $entity_data) {
+        $entity_ids[] = $entity_data['reference']; 
+      }
+      
+      // Get the appropriate entities
+      $entities = $this->find_entities_by_id($entity_ids);
+      
+      // And render them
+      $text = render(entity_view($this->configuration['entity'], $entities, $this->configuration['view_mode']));
     }
     
     return $text;
   }
   
+  /**
+   * Provides the container edit form
+   * 
+   * @see pane_base::container_edit_form()
+   * 
+   * @return array
+   */
   public function container_edit_form(&$form_state = array()) {
     $mode = (TRUE === isset($this->configuration['mode'])) ? $this->configuration['mode'] : self::BY_BUNDLE;
     $multiplicity = (TRUE === isset($this->configuration['multiplicity'])) ? $this->configuration['multiplicity'] : 1;
@@ -215,11 +232,19 @@ class pane_entity_reference extends pane_base {
     return $form;
   }
   
+  /**
+   * Provides the form for selecting by entity / bundle
+   * 
+   * @param array $form_state
+   * 
+   * @return array
+   */
   protected function get_bundle_form(&$form_state) {
     $form = array();
     
     $entities = array();
     $bundles = array();
+    $display_modes = array();
     
     foreach (entity_get_info() as $name => $info) {
       $entities[$name] = t($info['label']);
@@ -227,6 +252,11 @@ class pane_entity_reference extends pane_base {
       foreach ($info['bundles'] as $bundle => $bundle_info) {
         $bundles[$name][$bundle] = t($bundle_info['label']);
       }
+      
+      foreach ($info['view modes'] as $machine_name => $mode_info) {
+        $display_modes[$name][$machine_name] = $mode_info['label'];
+      }
+      
     }
     
     $entity = (TRUE === isset($this->configuration['entity'])) ? $this->configuration['entity'] : array_shift(array_keys($entities));
@@ -247,20 +277,38 @@ class pane_entity_reference extends pane_base {
       '#title' => t('Target bundles'),
       '#options' => $bundles[$entity],
       '#description' => t('The bundles of the entity type that can be referenced. Optional, leave empty for all bundles.'),
-      '#process' => array('form_process_checkboxes'),
-      '#theme_wrappers' => array('checkboxes'),
       '#default_value' => (TRUE === isset($this->configuration['target_bundles'])) ? $this->configuration['target_bundles'] : array(),
     );
     
+    $form[$this->container . '_view_mode'] = array(
+      '#type' => 'select',
+      '#title' => t('View Mode'),
+      '#options' => $display_modes[$entity],
+      '#description' => t('Display mode used to render selections'),
+      '#default_value' => (TRUE === isset($this->configuration['view_mode'])) ? $this->configuration['view_mode'] : '',
+      '#required' => TRUE,  
+    );
     return $form;
   }
   
+  /**
+   * Provides the form for selecting by view
+   * 
+   * @param array $form_state
+   * 
+   * @return array
+   */
   protected function get_view_form(&$form_state) {
     $form = array();
     
     return $form;
   }
   
+  /**
+   * Submit handler for container edit form
+   * 
+   * @see pane_base::container_edit_form_submit()
+   */
   public function container_edit_form_submit(&$form_state) {
     $configuration = array();
     
@@ -280,11 +328,21 @@ class pane_entity_reference extends pane_base {
       $configuration['multiplicity'] = (int) $form_state['values'][$this->container . '_multiplicity'];
     }
     
+    if (TRUE === isset($form_state['values'][$this->container . '_view_mode'])) {
+      $configuration['view_mode'] = (string) $form_state['values'][$this->container . '_view_mode'];
+    }
+    
     if (FALSE === empty($configuration)) {
       $this->configuration = $configuration;
     }
   }
   
+  /**
+   * Builds the EntityFieldQuery to find an entity based on the current container
+   * configuration
+   * 
+   * @return EntityFieldQuery
+   */
   protected function build_entity_query() {
     $entity_type = $this->configuration['entity'];
     $entity_info = entity_get_info($entity_type);
@@ -308,6 +366,13 @@ class pane_entity_reference extends pane_base {
     return $query;
   }
   
+  /**
+   * Returns entities for the provided IDs and the current container configuration
+   * 
+   * @param mixed array|integer $ids
+   * 
+   * @return array
+   */
   public function find_entities_by_id($ids) {
     $entity_type = $this->configuration['entity'];
     $entity_info = entity_get_info($entity_type);
@@ -332,6 +397,14 @@ class pane_entity_reference extends pane_base {
     return $entities;
   }
   
+  /**
+   * Returns entities matching by title and the current container configuration
+   *
+   * @param string $string
+   * @param boolean $exact
+   *
+   * @return array
+   */
   public function find_entities_by_title($string, $exact = FALSE) {
     $entity_type = $this->configuration['entity'];
     $entity_info = entity_get_info($entity_type);
