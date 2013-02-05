@@ -70,8 +70,15 @@ function pane_pane_content_type_render($subtype_id, $conf, $args, $contexts) {
   if (FALSE !== $pane) {
     $block->title = $pane->title;
 
+    // Make sure we can use render arrays as well as HTML
+    $markup = $pane->render();
+    
+    if (TRUE === is_array($markup)) {
+      $markup = render($markup);
+    }
+    
     $block->content = array(
-      '#markup' => $pane->render(),
+      '#markup' => $markup,
       '#prefix' => '<div class = "'. str_replace('_', '-', substr($pane->container, 0, -12)) .'">',
       '#suffix' => '</div>',
     );

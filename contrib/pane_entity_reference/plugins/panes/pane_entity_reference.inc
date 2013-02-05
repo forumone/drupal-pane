@@ -168,7 +168,7 @@ class pane_entity_reference extends pane_base {
    * @return string
    */
   public function render() {
-    $text = '';
+    $markup = '';
     
     if (TRUE === isset($this->data['ids'])) {
       $entity_ids = array();
@@ -181,10 +181,10 @@ class pane_entity_reference extends pane_base {
       $entities = $this->find_entities_by_id($entity_ids);
       
       // And render them
-      $text = render(entity_view($this->configuration['entity'], $entities, $this->configuration['view_mode']));
+      $markup = entity_view($this->configuration['entity'], $entities, $this->configuration['view_mode']);
     }
     
-    return $text;
+    return $markup;
   }
   
   /**
@@ -202,14 +202,14 @@ class pane_entity_reference extends pane_base {
     $multiplicity_values = array_combine($values, $values);
     $multiplicity_values = array(0 => t('Unlimited')) + $multiplicity_values;
     
-    $form[$this->container . '_multiplicity'] = array(
+    $form['multiplicity'] = array(
       '#type' => 'select',
       '#title' => t('Number of values'),
       '#options' => $multiplicity_values,
       '#default_value' => $multiplicity,
     );
     
-    $form[$this->container . '_mode'] = array(
+    $form['mode'] = array(
       '#type' => 'select',
       '#title' => t('Mode'),
       '#default_value' => $mode,
@@ -261,7 +261,7 @@ class pane_entity_reference extends pane_base {
     
     $entity = (TRUE === isset($this->configuration['entity'])) ? $this->configuration['entity'] : array_shift(array_keys($entities));
     
-    $form[$this->container . '_entity'] = array(
+    $form['entity'] = array(
       '#type' => 'select',
       '#title' => t('Entity'),
       '#default_value' => $entity,
@@ -272,7 +272,7 @@ class pane_entity_reference extends pane_base {
       ),
     );
     
-    $form[$this->container . '_target_bundles'] = array(
+    $form['target_bundles'] = array(
       '#type' => 'checkboxes',
       '#title' => t('Target bundles'),
       '#options' => $bundles[$entity],
@@ -280,7 +280,7 @@ class pane_entity_reference extends pane_base {
       '#default_value' => (TRUE === isset($this->configuration['target_bundles'])) ? $this->configuration['target_bundles'] : array(),
     );
     
-    $form[$this->container . '_view_mode'] = array(
+    $form['view_mode'] = array(
       '#type' => 'select',
       '#title' => t('View Mode'),
       '#options' => $display_modes[$entity],
@@ -311,25 +311,25 @@ class pane_entity_reference extends pane_base {
    */
   public function container_edit_form_submit(&$form_state) {
     $configuration = array();
-    
-    if (TRUE === isset($form_state['values'][$this->container . '_mode'])) {
-      $configuration['mode'] = $form_state['values'][$this->container . '_mode'];
+
+    if (TRUE === isset($form_state['values'][$this->container]['configuration']['mode'])) {
+      $configuration['mode'] = $form_state['values'][$this->container]['configuration']['mode'];
     }
     
-    if (TRUE === isset($form_state['values'][$this->container . '_entity'])) {
-      $configuration['entity'] = $form_state['values'][$this->container . '_entity'];
+    if (TRUE === isset($form_state['values'][$this->container]['configuration']['entity'])) {
+      $configuration['entity'] = $form_state['values'][$this->container]['configuration']['entity'];
     }
     
-    if (TRUE === isset($form_state['values'][$this->container . '_target_bundles'])) {
-      $configuration['target_bundles'] = array_filter($form_state['values'][$this->container . '_target_bundles']);
+    if (TRUE === isset($form_state['values'][$this->container]['configuration']['target_bundles'])) {
+      $configuration['target_bundles'] = array_filter($form_state['values'][$this->container]['configuration']['target_bundles']);
     }
     
-    if (TRUE === isset($form_state['values'][$this->container . '_multiplicity'])) {
-      $configuration['multiplicity'] = (int) $form_state['values'][$this->container . '_multiplicity'];
+    if (TRUE === isset($form_state['values'][$this->container]['configuration']['multiplicity'])) {
+      $configuration['multiplicity'] = (int) $form_state['values'][$this->container]['configuration']['multiplicity'];
     }
     
-    if (TRUE === isset($form_state['values'][$this->container . '_view_mode'])) {
-      $configuration['view_mode'] = (string) $form_state['values'][$this->container . '_view_mode'];
+    if (TRUE === isset($form_state['values'][$this->container]['configuration']['view_mode'])) {
+      $configuration['view_mode'] = (string) $form_state['values'][$this->container]['configuration']['view_mode'];
     }
     
     if (FALSE === empty($configuration)) {
