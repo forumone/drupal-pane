@@ -30,3 +30,72 @@ function pane_entity_reference_pane_registry() {
 
   return $registry;
 }
+
+function pane_entity_reference_theme() {
+  $theme = array();
+  
+  $theme['pane_entity_reference_reorder_form'] = array(
+    'render element' => 'element',  
+  );
+  return $theme;
+}
+
+function theme_pane_entity_reference_reorder_form(&$variables) {
+  $element = $variables['element'];
+  
+  $rows = array();
+  
+  foreach (element_children($element, TRUE) as $name) {
+    $element[$name]['weight']['#attributes']['class'][] = 'type-order-weight';
+    
+    $rows[] = array(
+      'data' => array(
+        drupal_render($element[$name]['reference']),
+        drupal_render($element[$name]['weight']),
+      ),
+      'class' => array('draggable'),  
+    );
+  }
+
+  $headers = array(t('References'), t('Weight'));
+  $output = drupal_render_children($element);
+  $output .= theme('table', array('header' => $headers, 'rows' => $rows, 'attributes' => array('id' => 'group-by-order')));
+  drupal_add_tabledrag('group-by-order', 'order', 'sibling', 'type-order-weight', NULL, NULL, TRUE);
+  
+  return $output;
+}
+
+function pane_entity_reference_menu() {
+  $items = array();
+  
+  $items['entityreference-autocomplete/%'] = array(
+    'page callback' => 'pane_entity_reference_autocomplete_callback',
+    'access callback' => TRUE,
+    'page arguments' => array(1),
+  );
+  
+  return $items;
+}
+
+function pane_entity_reference_add_callback($form, &$form_state) {
+  return $form['references'];
+}
+
+function pane_entity_reference_add_submit(&$form, &$form_state) {
+  $form_state['blanks'] += 1;
+  $form_state['rebuild'] = TRUE;
+}
+
+function pane_entity_reference_autocomplete_callback($container, $title = '') {
+  $pane = pane_load_container($container);
+  $entities = $pane->find_entities_by_title($title);
+  $entity_type = $pane->getConfigurationValue('entity');
+  
+  $options = array();
+  
+  foreach ($entities as $entity_id => $entity) {
+    $options[entity_label($entity_type, $entity) . " [id: $entity_id]"] = '<span class="autocomplete_title">' . check_plain(entity_label($entity_type, $entity)) . '</span>';
+  }
+  
+  drupal_json_output($options);
+}

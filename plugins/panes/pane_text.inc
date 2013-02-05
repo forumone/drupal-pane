@@ -19,6 +19,15 @@ class pane_text extends pane_base {
   }
   
   /**
+   * Validates the form data
+   * 
+   * @see pane_base::data_edit_form_validate()
+   */
+  public function data_edit_form_validate(&$form, &$form_state) {
+    // Do nothing
+  }
+  
+  /**
    * Saves the form data
    * 
    * @see pane_base::data_edit_form_submit()

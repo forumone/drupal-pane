@@ -11,14 +11,144 @@ class pane_entity_reference extends pane_base {
    * @return array
    */
   public function data_edit_form($form = array(), &$form_state = array()) {
-    $form['description'] = array(
-      '#type' => 'text_format',
-      '#title' => t('Description'),
-      '#default_value' => (TRUE === isset($this->data['value'])) ? $this->data['value'] : '',
-      '#format' => (TRUE === isset($this->data['format'])) ? $this->data['format'] : ''
+    $entity_type = $this->configuration['entity'];
+    
+    $form['#tree'] = TRUE;
+    
+    $form['references'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('References'),
+      '#theme' => 'pane_entity_reference_reorder_form',
     );
     
+    $ids = (TRUE === isset($this->data['ids'])) ? $this->data['ids'] : array();
+
+    // Sort the ids by their weight
+    usort($ids, 'drupal_sort_weight');
+
+    // If we have a defined multiplicity
+    
+    if (0 < $this->configuration['multiplicity']) {
+      for ($i = 0; $i < $this->configuration['multiplicity']; $i++) {
+        $entity = NULL;
+        if (TRUE === isset($ids[$i])) {
+          $entities = $this->find_entities_by_id($ids[$i]['reference']);
+          if (0 < sizeof($entities)) {
+            $entity = array_pop($entities);
+            list($id, $vid, $bundle) = entity_extract_ids($entity_type, $entity);
+          }
+        }
+        
+        $form['references'][$i]['reference'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Item ' . $i),
+          '#title_display' => 'invisible',  
+          '#autocomplete_path' => 'entityreference-autocomplete/' . $this->container,
+          '#attached' => array(
+            'js' => array('misc/autocomplete.js'),
+          ),
+          '#multiple' => TRUE,
+          '#default_value' => (NULL !== $entity) ? entity_label($entity_type, $entity) . " [id: $id]" : '',  
+        );
+        
+        $form['references'][$i]['weight'] = array(
+          '#type' => 'weight',
+          '#delta' => $this->configuration['multiplicity'],
+          '#default_value' => (NULL !== $entity) ? $ids[$i]['weight'] : $i,  
+          '#multiple' => TRUE,
+        );
+      }
+    }
+    // Unlimited multiplicity
+    else {
+      $blanks = (TRUE === isset($form_state['blanks'])) ? $form_state['blanks'] : 1;
+      $form_state['blanks'] = $blanks;
+      
+      for ($i = 0; $i < (sizeof($ids) + $blanks); $i++) {
+        $entity = NULL;
+        
+        if (TRUE === isset($ids[$i])) {
+          $entities = $this->find_entities_by_id($ids[$i]['reference']);
+          if (0 < sizeof($entities)) {
+            $entity = array_pop($entities);
+            list($id, $vid, $bundle) = entity_extract_ids($entity_type, $entity);
+          }
+        }
+      
+        $form['references'][$i]['reference'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Item ' . $i),
+          '#title_display' => 'invisible',
+          '#autocomplete_path' => 'entityreference-autocomplete/' . $this->container,
+          '#attached' => array(
+            'js' => array('misc/autocomplete.js'),
+          ),
+          '#multiple' => TRUE,
+          '#default_value' => (NULL !== $entity) ? entity_label($entity_type, $entity) . " [id: $id]" : '',
+        );
+      
+        $form['references'][$i]['weight'] = array(
+          '#type' => 'weight',
+          '#delta' => 99,
+          '#default_value' => (NULL !== $entity) ? $ids[$i]['weight'] : $i,
+          '#multiple' => TRUE,
+        );
+      }
+      
+      $form['add_reference'] = array(
+        '#type' => 'submit',
+        '#value' => t('Add another item'),
+        '#submit' => array('pane_entity_reference_add_submit'),
+      );
+    }
+
     return $form;
+  }
+  
+  /**
+   * Validates the form data
+   *
+   * @see pane_base::data_edit_form_validate()
+   */
+  public function data_edit_form_validate(&$form, &$form_state) {
+    if (TRUE == $form_state['process_input']) {
+      $entity_type = $this->configuration['entity'];
+      $entity_info = entity_get_info($entity_type);
+      $id_field = $entity_info['entity keys']['id'];
+      
+      $values = array();
+
+      foreach ($form_state['values']['references'] as $reference) {
+        $value = $reference['reference'];
+        
+        $match = preg_match('/\[id: (\d+)\]/', $value, $preg_matches);
+        if (!$match) {
+          $match = preg_match('/^id: (\d+)/', $value, $preg_matches);
+        }
+        
+        if ($match) {
+          $value = $preg_matches[1];
+        }
+        
+        $entities = array();
+        
+        if (TRUE === is_numeric($value)) {
+          $entities = $this->find_entities_by_id($value);
+        }
+        else {
+          $entities = $this->find_entities_by_title($value, TRUE);
+        }
+        
+        if (0 < sizeof($entities)) {
+          $entity = array_pop($entities);
+          $values[] = array('weight' => $reference['weight'], 'reference' => $entity->{$id_field});
+        }
+      }
+
+      usort($values, 'drupal_sort_weight');
+
+      $form_state['values']['entity_ids'] = $values;
+    }
   }
   
   /**
@@ -27,7 +157,7 @@ class pane_entity_reference extends pane_base {
    * @see pane_base::data_edit_form_submit()
    */
   public function data_edit_form_submit(&$form, &$form_state) {
-    $this->data = $form_state['values']['description'];
+    $this->data = (TRUE === isset($form_state['values']['entity_ids'])) ? array('ids' => $form_state['values']['entity_ids']) : array();
   }
   
   /**
@@ -49,6 +179,18 @@ class pane_entity_reference extends pane_base {
   
   public function container_edit_form(&$form_state = array()) {
     $mode = (TRUE === isset($this->configuration['mode'])) ? $this->configuration['mode'] : self::BY_BUNDLE;
+    $multiplicity = (TRUE === isset($this->configuration['multiplicity'])) ? $this->configuration['multiplicity'] : 1;
+
+    $values = range(1, 9);
+    $multiplicity_values = array_combine($values, $values);
+    $multiplicity_values = array(0 => t('Unlimited')) + $multiplicity_values;
+    
+    $form[$this->container . '_multiplicity'] = array(
+      '#type' => 'select',
+      '#title' => t('Number of values'),
+      '#options' => $multiplicity_values,
+      '#default_value' => $multiplicity,
+    );
     
     $form[$this->container . '_mode'] = array(
       '#type' => 'select',
@@ -134,8 +276,84 @@ class pane_entity_reference extends pane_base {
       $configuration['target_bundles'] = array_filter($form_state['values'][$this->container . '_target_bundles']);
     }
     
+    if (TRUE === isset($form_state['values'][$this->container . '_multiplicity'])) {
+      $configuration['multiplicity'] = (int) $form_state['values'][$this->container . '_multiplicity'];
+    }
+    
     if (FALSE === empty($configuration)) {
       $this->configuration = $configuration;
     }
+  }
+  
+  protected function build_entity_query() {
+    $entity_type = $this->configuration['entity'];
+    $entity_info = entity_get_info($entity_type);
+    $title_field = $entity_info['entity keys']['label'];
+    
+    $query = new EntityFieldQuery();
+    
+    $query->entityCondition('entity_type', $entity_type)
+    ->range(0, 10);
+    
+    if (FALSE === empty($this->configuration['target_bundles'])) {
+      $query->entityCondition('bundle', $this->configuration['target_bundles'], 'IN');
+    }
+    
+    // Add a generic entity access tag to the query.
+    $query->addTag($entity_type . '_access');
+    $query->addTag('pane_entity_reference');
+    $query->addMetaData('container', $this->container);
+    $query->addMetaData('pane_plugin', $this);
+    
+    return $query;
+  }
+  
+  public function find_entities_by_id($ids) {
+    $entity_type = $this->configuration['entity'];
+    $entity_info = entity_get_info($entity_type);
+    $id_field = $entity_info['entity keys']['id'];
+    
+    if (FALSE === is_array($ids)) {
+      $ids = array($ids);
+    } 
+    
+    $entities = array();
+    
+    $query = $this->build_entity_query();
+    
+    $query->propertyCondition($id_field, $ids, 'IN');
+    
+    $results = $query->execute();
+    
+    if (!empty($results[$entity_type])) {
+      $entities = entity_load($entity_type, array_keys($results[$entity_type]));
+    }
+    
+    return $entities;
+  }
+  
+  public function find_entities_by_title($string, $exact = FALSE) {
+    $entity_type = $this->configuration['entity'];
+    $entity_info = entity_get_info($entity_type);
+    $title_field = $entity_info['entity keys']['label'];
+
+    $entities = array();
+    
+    $query = $this->build_entity_query();
+    
+    if (TRUE == $exact) {
+      $query->propertyCondition($title_field, $string, '=');
+    }
+    else {
+      $query->propertyCondition($title_field, '%' . $string . '%', 'LIKE');
+    }
+    
+    $results = $query->execute();
+    
+    if (!empty($results[$entity_type])) {
+      $entities = entity_load($entity_type, array_keys($results[$entity_type]));
+    }
+
+    return $entities;
   }
 }

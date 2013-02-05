@@ -6,6 +6,7 @@
 $plugin = array(
   'title' => t('Custom text pane'),
   'content type' => 'pane_pane_content_type_content_type',
+  'js' => array('misc/autocomplete.js')
 );
 
 /**
@@ -20,6 +21,7 @@ function pane_pane_content_type_content_types() {
     $info = array(
       'title' => $container->title,
       'category' => t('Custom panes'),
+      'js' => array('misc/autocomplete.js')
     );
 
     $types[$container->container] = $info;
@@ -42,7 +44,8 @@ function pane_pane_content_type_content_type($subtype_id) {
   if (FALSE !== $container) {
     $info = array(
       'title' => $container->title,
-      'category' => t('Custom panes'),  
+      'category' => t('Custom panes'), 
+      'js' => array('misc/autocomplete.js')
     );
   }
   
@@ -120,6 +123,11 @@ function pane_admin_info($subtype, $conf, $context = NULL) {
 function pane_pane_content_type_edit_form($form, &$form_state) {
   $container = pane_load_container($form_state['subtype_name']);
   return $container->data_edit_form($form, $form_state);
+}
+
+function pane_pane_content_type_edit_form_validate(&$form, &$form_state) {
+  $container = pane_load_container($form_state['subtype_name']);
+  $container->data_edit_form_validate($form, $form_state);
 }
 
 /**

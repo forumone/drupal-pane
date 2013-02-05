@@ -65,6 +65,10 @@ abstract class pane_base {
     return $this->configuration;
   }
   
+  public function getConfigurationValue($key) {
+    return (TRUE === isset($this->configuration[$key])) ? $this->configuration[$key] : NULL;
+  }
+  
   /**
    * Sets the pane language
    * 
@@ -166,6 +170,14 @@ abstract class pane_base {
    * @return array
    */
   public abstract function data_edit_form($form = array(), &$form_state = array());
+  
+  /**
+   * Signature for data edit form validate function
+   *
+   * @param array $form
+   * @param array $form_state
+   */
+  public abstract function data_edit_form_validate(&$form, &$form_state);
   
   /**
    * Signature for data edit form submit function
