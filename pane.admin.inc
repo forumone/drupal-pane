@@ -12,7 +12,7 @@ function pane_panes_list($form, &$form_state) {
   $panes = pane_get_containers();
   $blanks = (TRUE === isset($form_state['blanks'])) ? $form_state['blanks'] : 0;
   
-  $plugins = array('' => t('--Select--'));
+  $plugins = array();
   
   foreach (pane_registry() as $type => $pane_type) {
     $plugins[$type] = $pane_type['title'];
@@ -123,7 +123,16 @@ function pane_panes_list($form, &$form_state) {
       '#default_value' => '',
       '#options' => $plugins,
       '#required' => TRUE,
+      '#ajax' => array(
+        'callback' => 'pane_plugin_change_ajax',
+        'wrapper' => 'blank' . $i . '-config',
+      ),
     );
+    
+    // Load the configuration form for the pane plugin
+    $tmp_pane = pane_instance(array_shift(array_keys($plugins)));
+    $tmp_pane->setContainer('blank' . $i);
+    $form['blank' . $i] += pane_admin_get_configuration_form($tmp_pane, $form_state);
   }
 
   $form['submit'] = array(
@@ -205,8 +214,7 @@ function pane_pane_delete(&$form, &$form_state) {
 function pane_panes_list_submit($form, &$form_state) {
   // First save any Panes we know about
   foreach ($form_state['values']['pane_list'] as $pane_id) {
-    $class = _pane_get_class($form_state['values'][$pane_id]['plugin']);
-    $container = new $class();
+    $container = pane_instance($form_state['values'][$pane_id]['plugin']);
     $container->setContainer($pane_id)->container_edit_form_submit($form_state);
     
     $pane = new stdClass();
@@ -221,12 +229,15 @@ function pane_panes_list_submit($form, &$form_state) {
   
   // And now save any blank ones
   for ($i = 0; $i < $form['panes']['#blanks']; $i++) {
+    $container = pane_instance($form_state['values']['blank' . $i]['plugin']);
+    $container->setContainer('blank' . $i)->container_edit_form_submit($form_state);
+    
     $pane = new stdClass();
     $pane->name = $form_state['values']['blank' . $i]['name'];
     $pane->title = $form_state['values']['blank' . $i]['title'];
     $pane->description = $form_state['values']['blank' . $i]['description'];
     $pane->plugin = $form_state['values']['blank' . $i]['plugin'];
-    $pane->configuration = array();
+    $pane->configuration = $container->configuration;
     
     pane_save_container($pane);
   }
@@ -261,9 +272,13 @@ function pane_admin_get_configuration_form($pane, &$form_state) {
   // Load a temporary pane to get configuration
   $temp_pane = pane_load_container($pane->container);
   
-  $container->setContainer($pane->container)
-    ->setConfiguration($temp_pane->configuration)
-    ->container_edit_form_submit($form_state);
+  $container->setContainer($pane->container);
+  
+  if (FALSE != $temp_pane) {
+    $container->setConfiguration($temp_pane->configuration);
+  }
+  
+  $container->container_edit_form_submit($form_state);
   
   foreach ($container->container_edit_form(&$form_state) as $id => $form_item) {
     $form['configuration'][$id] = $form_item;

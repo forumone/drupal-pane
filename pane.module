@@ -258,12 +258,29 @@ function pane_get_data($container, $lang = 'und') {
  * @return pane_base
  */
 function pane_get_plugin($container) {
-  $class = _pane_get_class($container->plugin);
-  $pane = new $class();
+  return pane_instance($container->plugin);
+}
 
+/**
+ * Returns an instance of a pane from the plugin name
+ * 
+ * @param string $plugin
+ * @return pane_base
+ */
+function pane_instance($plugin) {
+  $class = _pane_get_class($plugin);
+  $pane = new $class();
+  $pane->setPlugin($plugin);
+  
   return $pane;
 }
 
+/**
+ * Returns the class name for a plugin
+ * 
+ * @param string $plugin
+ * @return string
+ */
 function _pane_get_class($plugin) {
   ctools_include('plugins');
   
