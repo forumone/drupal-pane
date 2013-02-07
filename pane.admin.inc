@@ -280,7 +280,7 @@ function pane_admin_get_configuration_form($pane, &$form_state) {
   
   $container->container_edit_form_submit($form_state);
   
-  foreach ($container->container_edit_form(&$form_state) as $id => $form_item) {
+  foreach ($container->container_edit_form($form_state) as $id => $form_item) {
     $form['configuration'][$id] = $form_item;
   }
   
