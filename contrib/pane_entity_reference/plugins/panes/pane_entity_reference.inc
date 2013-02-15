@@ -170,7 +170,7 @@ class pane_entity_reference extends pane_base {
   public function render() {
     $markup = '';
     
-    if (TRUE === isset($this->data['ids'])) {
+    if (TRUE === isset($this->data['ids']) && FALSE === empty($this->data['ids'])) {
       $entity_ids = array();
 
       foreach ($this->data['ids'] as $entity_data) {
