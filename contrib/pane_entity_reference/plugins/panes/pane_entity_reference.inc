@@ -26,8 +26,9 @@ class pane_entity_reference extends pane_base {
     // Sort the ids by their weight
     usort($ids, 'drupal_sort_weight');
 
-    // If we have a defined multiplicity
+    $values = array();
     
+    // If we have a defined multiplicity
     if (0 < $this->configuration['multiplicity']) {
       for ($i = 0; $i < $this->configuration['multiplicity']; $i++) {
         $entity = NULL;
@@ -39,6 +40,9 @@ class pane_entity_reference extends pane_base {
           }
         }
         
+        $value = (NULL !== $entity) ? entity_label($entity_type, $entity) . " [id: $id]" : '';
+        $values[$i] = array('reference' => $value, 'weight' => (NULL !== $entity) ? $ids[$i]['weight'] : $i);
+        
         $form['references'][$i]['reference'] = array(
           '#type' => 'textfield',
           '#title' => t('Item ' . $i),
@@ -48,7 +52,7 @@ class pane_entity_reference extends pane_base {
             'js' => array('misc/autocomplete.js'),
           ),
           '#multiple' => TRUE,
-          '#default_value' => (NULL !== $entity) ? entity_label($entity_type, $entity) . " [id: $id]" : '',  
+          '#default_value' => $value,  
         );
         
         $form['references'][$i]['weight'] = array(
@@ -75,6 +79,9 @@ class pane_entity_reference extends pane_base {
           }
         }
       
+        $value = (NULL !== $entity) ? entity_label($entity_type, $entity) . " [id: $id]" : '';
+        $values[$i] = array('reference' => $value, 'weight' => (NULL !== $entity) ? $ids[$i]['weight'] : $i);
+        
         $form['references'][$i]['reference'] = array(
           '#type' => 'textfield',
           '#title' => t('Item ' . $i),
@@ -84,7 +91,7 @@ class pane_entity_reference extends pane_base {
             'js' => array('misc/autocomplete.js'),
           ),
           '#multiple' => TRUE,
-          '#default_value' => (NULL !== $entity) ? entity_label($entity_type, $entity) . " [id: $id]" : '',
+          '#default_value' => $value,
         );
       
         $form['references'][$i]['weight'] = array(
@@ -101,6 +108,8 @@ class pane_entity_reference extends pane_base {
         '#submit' => array('pane_entity_reference_add_submit'),
       );
     }
+    
+    $form_state['input']['references'] = $values;
 
     return $form;
   }
