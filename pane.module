@@ -367,6 +367,31 @@ function pane_save_container($container) {
   ctools_export_crud_save('pane_container', $container);
 }
 
+/**
+ * Change the language for a pane
+ * 
+ * @param array $form
+ * @param array $form_state
+ */
 function pane_change_language(&$form, &$form_state) {
   $form_state['rebuild'] = TRUE;
+  
+  // If we're editing through the block interface we have to reload the container
+  // to get the edits to the form state to work since we don't have that through
+  // hook_block_configure
+  if (TRUE === isset($form_state['values']['delta'])) {
+    global $language;
+    
+    $lang = LANGUAGE_NONE;
+    
+    if (drupal_multilingual()) {
+      $lang = (TRUE === isset($form_state['values']['language'])) ? $form_state['values']['language'] : $language->language;
+    }
+    
+    $container = pane_load_container($form_state['values']['delta'], $lang);
+  
+    if (FALSE !== $container) {
+      $container->data_edit_form_wrapper($form, $form_state);
+    }
+  }
 }

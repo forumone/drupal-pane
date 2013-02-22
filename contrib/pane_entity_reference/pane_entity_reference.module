@@ -106,7 +106,8 @@ function pane_entity_reference_menu() {
  * @param array $form_state
  */
 function pane_entity_reference_add_submit(&$form, &$form_state) {
-  $form_state['blanks'] += 1;
+  $blanks = (TRUE === isset($form_state['blanks'])) ? $form_state['blanks'] : 0;
+  $form_state['blanks'] = $blanks + 1;
   $form_state['rebuild'] = TRUE;
 }
 
