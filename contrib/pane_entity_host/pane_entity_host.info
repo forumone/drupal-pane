@@ -1,0 +1,5 @@
+name = Pane Entity Host
+description = Provides a pane that hosts another entity
+core = 7.x
+
+dependencies[] = pane

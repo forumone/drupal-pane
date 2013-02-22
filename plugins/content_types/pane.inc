@@ -63,7 +63,15 @@ function pane_pane_content_type_content_type($subtype_id) {
  * @return stdClass
  */
 function pane_pane_content_type_render($subtype_id, $conf, $args, $contexts) {
-  $pane = pane_load_container($subtype_id);
+  global $language;
+  
+  $lang = LANGUAGE_NONE;
+  
+  if (drupal_multilingual()) {
+    $lang = (TRUE === isset($form_state['values']['language'])) ? $form_state['values']['language'] : $language->language;
+  }
+  
+  $pane = pane_load_container($subtype_id, $lang);
 
   $block = new stdClass;
 

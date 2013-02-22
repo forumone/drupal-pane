@@ -175,7 +175,15 @@ function pane_block_info() {
  * @return array
  */
 function pane_block_view($delta = '') {
-  $container = pane_load_container($delta);
+  global $language;
+  
+  $lang = LANGUAGE_NONE;
+  
+  if (drupal_multilingual()) {
+    $lang = (TRUE === isset($form_state['values']['language'])) ? $form_state['values']['language'] : $language->language;
+  }
+  
+  $container = pane_load_container($delta, $lang);
   $block = array();
   
   if (FALSE !== $container) {
@@ -199,10 +207,10 @@ function pane_block_view($delta = '') {
  */
 function pane_block_configure($delta = '') {
   global $language;
-  
+
   $lang = LANGUAGE_NONE;
   
-  if (FALSE && drupal_multilingual()) {
+  if (drupal_multilingual()) {
     $lang = (TRUE === isset($form_state['values']['language'])) ? $form_state['values']['language'] : $language->language;
   }
   

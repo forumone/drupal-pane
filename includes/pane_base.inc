@@ -221,10 +221,15 @@ abstract class pane_base {
   public function data_edit_form_wrapper($form = array(), &$form_state = array()) {
     global $language;
 
-    ctools_add_js('auto-submit');
-    //$lang = (TRUE === isset($form_state['values']['language'])) ? $form_state['values']['language'] : $language->language;
+    $lang = LANGUAGE_NONE;
     
-    if (FALSE && drupal_multilingual()) {
+    if (drupal_multilingual()) {
+      $lang = (TRUE === isset($form_state['values']['language'])) ? $form_state['values']['language'] : $language->language;
+    }
+    
+    ctools_add_js('auto-submit');
+
+    if (drupal_multilingual()) {
       $form['language'] = array(
         '#type' => 'select',
         '#title' => t('Language'),
@@ -248,7 +253,7 @@ abstract class pane_base {
     }
     
     $form += $this->data_edit_form($form, $form_state);
-    
+
     return $form;
   }
 }

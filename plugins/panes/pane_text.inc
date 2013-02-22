@@ -15,6 +15,8 @@ class pane_text extends pane_base {
       '#format' => (TRUE === isset($this->data['format'])) ? $this->data['format'] : ''
     );
     
+    $form_state['input']['description'] = $this->data;
+
     return $form;
   }
   
