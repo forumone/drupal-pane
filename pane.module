@@ -179,10 +179,9 @@ function pane_block_view($delta = '') {
   $block = array();
   
   if (FALSE !== $container) {
-    $pane = pane_get_data($container);
     $block['subject'] = $container->title;
     $block['content'] = array(
-      '#markup' => $pane->render(),  
+      '#markup' => $container->render(),  
       '#prefix' => '<div class = "'. str_replace('_', '-', substr($container->name, 0, -12)) .'">',
       '#suffix' => '</div>',
     );
@@ -199,12 +198,20 @@ function pane_block_view($delta = '') {
  * @return array:
  */
 function pane_block_configure($delta = '') {
-  $container = pane_load_container($delta);
+  global $language;
+  
+  $lang = LANGUAGE_NONE;
+  
+  if (FALSE && drupal_multilingual()) {
+    $lang = (TRUE === isset($form_state['values']['language'])) ? $form_state['values']['language'] : $language->language;
+  }
+  
+  $container = pane_load_container($delta, $lang);
+  
   $form = array();
   
   if (FALSE !== $container) {
-    $pane = pane_get_data($container);
-    $form = $pane->edit_form();
+    $form = $container->data_edit_form_wrapper();
   }
   
   return $form;
@@ -220,11 +227,11 @@ function pane_block_save($delta = '', $edit = array()) {
   $container = pane_load_container($delta);
   
   if (FALSE !== $container) {
-    $pane = pane_get_data($container);
     $form_state = array('values' => $edit);
     $form = array();
-    $pane->edit_form_submit($form, $form_state);
-    $pane->save_data();
+    
+    $container->data_edit_form_wrapper_submit($form, $form_state);
+    $container->save_data();
   }
 }
 
@@ -236,7 +243,7 @@ function pane_block_save($delta = '', $edit = array()) {
  * 
  * @return pane_base
  */
-function pane_get_data($container, $lang = 'und') {
+function pane_get_data($container, $lang = LANGUAGE_NONE) {
   ctools_include('export');
   
   $plugin = pane_get_plugin($container);
@@ -308,18 +315,18 @@ function pane_get_containers() {
  * @param string
  * @return array
  */
-function pane_load_container($name = NULL) {
+function pane_load_container($name = NULL, $lang = LANGUAGE_NONE) {
   ctools_include('export');
   
   if (NULL !== $name) {
     $presets = ctools_export_load_object('pane_container', 'names', array($name));
-    return isset($presets[$name]) ? pane_get_data($presets[$name]) : FALSE;
+    return isset($presets[$name]) ? pane_get_data($presets[$name], $lang) : FALSE;
   }
   else {
     $containers = array();
     
     foreach (ctools_export_load_object('pane_container') as $container) {
-      $containers[] = pane_get_data($container);
+      $containers[] = pane_get_data($container, $lang);
     }
     
     return $containers;
@@ -350,4 +357,8 @@ function pane_save_container($container) {
   ));
   
   ctools_export_crud_save('pane_container', $container);
+}
+
+function pane_change_language(&$form, &$form_state) {
+  $form_state['rebuild'] = TRUE;
 }

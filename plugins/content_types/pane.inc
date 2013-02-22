@@ -128,8 +128,16 @@ function pane_admin_info($subtype, $conf, $context = NULL) {
  * @return array
  */
 function pane_pane_content_type_edit_form($form, &$form_state) {
-  $container = pane_load_container($form_state['subtype_name']);
-  return $container->data_edit_form($form, $form_state);
+  global $language;
+  
+  $lang = LANGUAGE_NONE;
+  
+  if (drupal_multilingual()) {
+    $lang = (TRUE === isset($form_state['values']['language'])) ? $form_state['values']['language'] : $language->language;
+  }
+  
+  $container = pane_load_container($form_state['subtype_name'], $lang);
+  return $container->data_edit_form_wrapper($form, $form_state);
 }
 
 function pane_pane_content_type_edit_form_validate(&$form, &$form_state) {
@@ -145,6 +153,6 @@ function pane_pane_content_type_edit_form_validate(&$form, &$form_state) {
  */
 function pane_pane_content_type_edit_form_submit(&$form, &$form_state) {
   $container = pane_load_container($form_state['subtype_name']);
-  $container->data_edit_form_submit($form, $form_state);
+  $container->data_edit_form_wrapper_submit($form, $form_state);
   $container->save_data();
 }

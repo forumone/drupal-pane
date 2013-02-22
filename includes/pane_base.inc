@@ -1,7 +1,7 @@
 <?php
 abstract class pane_base {
   protected $data;
-  protected $lang;
+  protected $lang = LANGUAGE_NONE;
   protected $container;
   protected $configuration;
   protected $plugin;
@@ -121,6 +121,7 @@ abstract class pane_base {
     $current_data->name = $this->container . '_' . $current_data->lang;
     $current_data->data = $this->data;
     $current_data->container = $this->container;
+    $current_data->lang = $this->lang;
     
     ctools_export_crud_save('pane_data', $current_data);
     
@@ -211,4 +212,44 @@ abstract class pane_base {
    * @param array $form_state
    */
   public abstract function container_edit_form_submit(&$form_state);
+  
+  public function data_edit_form_wrapper_submit(&$form, &$form_state) {
+    $this->lang = $form_state['values']['language'];
+    dsm($form_state);
+    $this->data_edit_form_submit($form, $form_state);
+  }
+  
+  public function data_edit_form_wrapper($form = array(), &$form_state = array()) {
+    global $language;
+
+    ctools_add_js('auto-submit');
+    //$lang = (TRUE === isset($form_state['values']['language'])) ? $form_state['values']['language'] : $language->language;
+    
+    if (FALSE && drupal_multilingual()) {
+      $form['language'] = array(
+        '#type' => 'select',
+        '#title' => t('Language'),
+        '#options' => locale_language_list(),
+        '#default_value' => $lang, 
+        '#attributes' => array('class' => array('ctools-auto-submit')), 
+      );
+      
+      $form['change_language'] = array(
+        '#type' => 'submit',
+        '#title' => t('Change Language'),
+        '#attributes' => array('class' => array('ctools-use-ajax', 'ctools-auto-submit-click'), 'style' => array('display: none')),
+        '#submit' => array('pane_change_language'),
+      );
+    }
+    else {
+      $form['language'] = array(
+        '#type' => 'value',
+        '#value' => LANGUAGE_NONE,
+      );
+    }
+    
+    $form += $this->data_edit_form($form, $form_state);
+    
+    return $form;
+  }
 }
