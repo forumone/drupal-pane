@@ -215,7 +215,6 @@ abstract class pane_base {
   
   public function data_edit_form_wrapper_submit(&$form, &$form_state) {
     $this->lang = $form_state['values']['language'];
-    dsm($form_state);
     $this->data_edit_form_submit($form, $form_state);
   }
   
