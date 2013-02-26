@@ -81,6 +81,13 @@ function pane_panes_list($form, &$form_state) {
     // Load the configuration form for the pane plugin
 
     $form[$pane->container] += pane_admin_get_configuration_form($pane, $form_state);
+
+    $form[$pane->container]['remove'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Remove this pane type'),
+      '#description' => t('NOTE: Be sure this pane is no longer in use on your site before removing'),
+      '#default_value' => false,
+    );
   }
 
   for ($i = 0; $i < $blanks; $i++) {
@@ -214,6 +221,8 @@ function pane_pane_delete(&$form, &$form_state) {
 function pane_panes_list_submit($form, &$form_state) {
   // First save any Panes we know about
   foreach ($form_state['values']['pane_list'] as $pane_id) {
+
+
     $container = pane_instance($form_state['values'][$pane_id]['plugin']);
     $container->setContainer($pane_id)->container_edit_form_submit($form_state);
 
@@ -224,7 +233,12 @@ function pane_panes_list_submit($form, &$form_state) {
     $pane->plugin = $form_state['values'][$pane_id]['plugin'];
     $pane->configuration = $container->configuration;
 
-    pane_save_container($pane);
+    if ($form_state['values'][$pane_id]['remove']) {
+      pane_delete_container($pane);
+    }
+    else {
+      pane_save_container($pane);
+    }
   }
 
   // And now save any blank ones
