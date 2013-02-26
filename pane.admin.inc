@@ -109,8 +109,8 @@ function pane_panes_list($form, &$form_state) {
       '#type' => 'machine_name',
       '#title' => t('Machine Name'),
       '#description' => t('machine-friendly name.'),
-      '#size' => 15,
-      '#maxlength' => 15,
+      '#size' => 32,
+      '#maxlength' => 32,
       '#default_value' => '',
       '#machine_name' => array(
         'source' => array('blank' . $i, 'title'), 	// the name of the source field that we will Take the User Friendly name from and convert it to Machine Friedly name
