@@ -477,7 +477,17 @@ class pane_entity_reference extends pane_base {
 
     $results = $query->execute();
 
-    return $results[$entity_type];
+    // Now that we have the matches let's compare them to the IDs we have in configuration
+    $keys = array_keys($results[$entity_type]);
+    $ids = array_intersect($ids, $keys);
+
+    $output = array();
+    
+    foreach ($ids as $id) {
+      $output[$id] = $results[$entity_type][$id];
+    }
+    
+    return $output;
   }
 
   public function view_find_entities_by_id($ids){
