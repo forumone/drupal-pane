@@ -86,7 +86,7 @@ function pane_pane_content_type_render($subtype_id, $conf, $args, $contexts) {
     }
 
     // Wrap pane in a wrapper class to facilitate theming
-    $wrapper_class = 'panel-pane-wrapper pane-'. $subtype_id .'-wrapper';
+    $wrapper_class = 'panel-pane-wrapper pane-'. str_replace('_', '-', $subtype_id) .'-wrapper';
     $block->pane_prefix = '<div class="'. $wrapper_class .'">';
     $block->pane_suffix = '</div>';
 
