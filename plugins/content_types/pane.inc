@@ -4,7 +4,7 @@
  * CTools content type definition
  */
 $plugin = array(
-  'title' => t('Custom text pane'),
+  'title' => t('Custom pane'),
   'content type' => 'pane_pane_content_type_content_type',
   'js' => array('misc/autocomplete.js')
 );
