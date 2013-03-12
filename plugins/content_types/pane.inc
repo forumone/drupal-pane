@@ -11,12 +11,12 @@ $plugin = array(
 
 /**
  * List of Pane content types
- * 
+ *
  * @return array
  */
 function pane_pane_content_type_content_types() {
   $types = array();
-  
+
   foreach (pane_get_containers() as $container) {
     $info = array(
       'title' => $container->title,
@@ -26,51 +26,51 @@ function pane_pane_content_type_content_types() {
 
     $types[$container->container] = $info;
   }
-  
+
   return $types;
 }
 
 /**
  * Information about a particular pane content type
- * 
+ *
  * @param string $subtype_id
- * 
+ *
  * @return array
  */
 function pane_pane_content_type_content_type($subtype_id) {
   $container = pane_load_container($subtype_id);
   $info = array();
-  
+
   if (FALSE !== $container) {
     $info = array(
       'title' => $container->title,
-      'category' => t('Custom panes'), 
+      'category' => t('Custom panes'),
       'js' => array('misc/autocomplete.js')
     );
   }
-  
+
   return $info;
 }
 
 /**
  * Renderer for Pane
- * 
+ *
  * @param string $subtype_id
  * @param array $conf
  * @param array $args
  * @param array $contexts
- * 
+ *
  * @return stdClass
  */
 function pane_pane_content_type_render($subtype_id, $conf, $args, $contexts) {
   global $language;
-  
+
   $lang = LANGUAGE_NONE;
-  
+
   if (drupal_multilingual()) {
     $lang = (TRUE === isset($form_state['values']['language'])) ? $form_state['values']['language'] : $language->language;
   }
-  
+
   $pane = pane_load_container($subtype_id, $lang);
 
   $block = new stdClass;
@@ -80,11 +80,16 @@ function pane_pane_content_type_render($subtype_id, $conf, $args, $contexts) {
 
     // Make sure we can use render arrays as well as HTML
     $markup = $pane->render();
-    
+
     if (TRUE === is_array($markup)) {
       $markup = render($markup);
     }
-    
+
+    // Wrap pane in a wrapper class to facilitate theming
+    $wrapper_class = 'panel-pane-wrapper pane-'. $subtype_id .'-wrapper';
+    $block->prefix = '<div class="'. $wrapper_class .'">';
+    $block->suffix = '</div>';
+
     $block->content = array(
       '#markup' => $markup,
       '#prefix' => '<div class = "'. str_replace('_', '-', substr($pane->container, 0, -12)) .'">',
@@ -97,30 +102,30 @@ function pane_pane_content_type_render($subtype_id, $conf, $args, $contexts) {
 
 /**
  * Generate administrative title for Panes
- * 
+ *
  * @param string $subtype
  * @param array $conf
  * @param array $context
- * 
+ *
  * @return string
  */
 function pane_admin_title($subtype, $conf, $context = NULL) {
   $pane = pane_load_pane($conf['content']);
-  
+
   if (FALSE !== $pane) {
     return t('Custom pane (%title)', array('%title' => $pane->title));
   }
-  
+
   return NULL;
 }
 
 /**
  * Administrative information for Panes
- * 
+ *
  * @param string $subtype
  * @param array $conf
  * @param array $context
- * 
+ *
  * @return stdClass
  */
 function pane_admin_info($subtype, $conf, $context = NULL) {
@@ -129,21 +134,21 @@ function pane_admin_info($subtype, $conf, $context = NULL) {
 
 /**
  * Edit form for Pane
- * 
+ *
  * @param array $form
  * @param array $form_state
- * 
+ *
  * @return array
  */
 function pane_pane_content_type_edit_form($form, &$form_state) {
   global $language;
-  
+
   $lang = LANGUAGE_NONE;
-  
+
   if (drupal_multilingual()) {
     $lang = (TRUE === isset($form_state['values']['language'])) ? $form_state['values']['language'] : $language->language;
   }
-  
+
   $container = pane_load_container($form_state['subtype_name'], $lang);
   return $container->data_edit_form_wrapper($form, $form_state);
 }
@@ -155,7 +160,7 @@ function pane_pane_content_type_edit_form_validate(&$form, &$form_state) {
 
 /**
  * Form submit handler for Pane edit form
- * 
+ *
  * @param array $form
  * @param array $form_state
  */
