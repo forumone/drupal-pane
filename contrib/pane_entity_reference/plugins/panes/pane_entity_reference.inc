@@ -189,6 +189,33 @@ class pane_entity_reference extends pane_base {
       // Get the appropriate entities
       $entities = $this->find_entities_by_id($entity_ids);
 
+      // Pad out the number of entities, if appropriate
+      if(!empty($this->configuration['view']['min_results'])){
+        while(count($entities) < $this->configuration['view']['min_results']){
+
+          // ensure we have all eligible entities
+          if(empty($eligible_entities)) {
+            if($results = $this->executeView()){
+              $entity_type = $this->configuration['entity'];
+              $eligible_entities = entity_load($entity_type, array_keys($results));
+            }
+            else{
+              break;
+            }
+          }
+
+          // add the next non-duplicate eligible entity to the array
+          if($item = each($eligible_entities)){
+            if(empty($entities[$item['key']])){
+              $entities[$item['key']] = $item['value'];
+            }
+          }
+          else{
+            break;
+          }
+        }
+      }
+
       // And render them
       $markup = entity_view($this->configuration['entity'], $entities, $this->configuration['view_mode']);
     }
@@ -328,7 +355,7 @@ class pane_entity_reference extends pane_base {
     }
 
     if ($options) {
-      $default = !empty($view_settings['view_name']) ? $view_settings['view_name'] . ':' . $view_settings['display_name'] : NULL;
+      $default = !empty($view_settings['view_and_display']) ? $view_settings['view_and_display'] : NULL;
       $form['view']['view_and_display'] = array(
         '#type' => 'select',
         '#title' => t('View used to select the entities'),
@@ -338,13 +365,22 @@ class pane_entity_reference extends pane_base {
         '#description' => '<p>' . t('Choose the view and display that select the entities that can be referenced.<br />Only views with a display of type "Entity Reference" are eligible.') . '</p>',
       );
 
-      $default = !empty($view_settings['args']) ? implode(', ', $view_settings['args']) : '';
+      $default = !empty($view_settings['args']) ? $view_settings['args'] : '';
       $form['view']['args'] = array(
         '#type' => 'textfield',
         '#title' => t('View arguments'),
         '#default_value' => $default,
         '#required' => FALSE,
         '#description' => t('Provide a comma separated list of arguments to pass to the view.'),
+      );
+
+      $default = !empty($view_settings['min_results']) ? $view_settings['min_results'] : 0;
+      $form['view']['min_results'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Minimum items'),
+        '#default_value' => $default,
+        '#required' => FALSE,
+        '#description' => t('If the number of items featured in the pane is fewer than the number set here, the difference will be made up by pulling non-duplicate items from the view. Sorts will be obeyed. Enter 0 for no minimum.'),
       );
     }
     else {
@@ -387,25 +423,6 @@ class pane_entity_reference extends pane_base {
 
     if(TRUE === isset($form_state['values'][$this->container]['configuration']['view'])){
       $configuration['view'] = $form_state['values'][$this->container]['configuration']['view'];
-
-      // Split view name and display name from the 'view_and_display' value.
-      if (!empty($configuration['view']['view_and_display'])) {
-        list($view, $display) = explode(':', $configuration['view']['view_and_display']);
-      }
-
-      // Explode the 'args' string into an actual array. Beware, explode() turns an
-      // empty string into an array with one empty string. We'll need an empty array
-      // instead.
-      $args_string = trim($configuration['view']['args']);
-      if ($args_string === '') {
-        $args = array();
-      }
-      else {
-        // array_map is called to trim whitespaces from the arguments.
-        $args = array_map('trim', explode(',', $args_string));
-      }
-
-      $configuration['view'] = array('view_name' => $view, 'display_name' => $display, 'args' => $args);
     }
 
     if (FALSE === empty($configuration)) {
@@ -536,9 +553,22 @@ class pane_entity_reference extends pane_base {
 
 
   public function executeView($match = NULL, $match_operator = 'CONTAINS', $limit = 0, $ids = NULL) {
-    $view_name = $this->configuration['view']['view_name'];
-    $display_name = $this->configuration['view']['display_name'];
-    $args =  $this->configuration['view']['args'];
+    // Split view name and display name from the 'view_and_display' value.
+    if (!empty($this->configuration['view']['view_and_display'])) {
+      list($view_name, $display_name) = explode(':', $this->configuration['view']['view_and_display']);
+    }
+
+    // Explode the 'args' string into an actual array. Beware, explode() turns an
+    // empty string into an array with one empty string. We'll need an empty array
+    // instead.
+    $args_string = trim($this->configuration['view']['args']);
+    if ($args_string === '') {
+      $args = array();
+    }
+    else {
+      // array_map is called to trim whitespaces from the arguments.
+      $args = array_map('trim', explode(',', $args_string));
+    }
 
     // Check that the view is valid and the display still exists.
     $this->view = views_get_view($view_name);
