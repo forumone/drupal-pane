@@ -23,6 +23,11 @@ class pane_entity_reference extends pane_base {
 
     $ids = (TRUE === isset($this->data['ids'])) ? $this->data['ids'] : array();
 
+    // If we have entities from the form status use those instead of the data
+    if (TRUE === isset($form_state['values']['entity_ids'])) {
+      $ids = $form_state['values']['entity_ids'];
+    }
+    
     // Sort the ids by their weight
     usort($ids, 'drupal_sort_weight');
 
@@ -65,10 +70,10 @@ class pane_entity_reference extends pane_base {
     }
     // Unlimited multiplicity
     else {
-      $blanks = (TRUE === isset($form_state['blanks'])) ? $form_state['blanks'] : 1;
+      $blanks = (TRUE === isset($form_state['blanks'])) ? $form_state['blanks'] : sizeof($ids) + 1;
       $form_state['blanks'] = $blanks;
 
-      for ($i = 0; $i < (sizeof($ids) + $blanks); $i++) {
+      for ($i = 0; $i < $blanks; $i++) {
         $entity = NULL;
 
         if (TRUE === isset($ids[$i])) {
@@ -523,13 +528,18 @@ class pane_entity_reference extends pane_base {
     $entity_type = $this->configuration['entity'];
     $entities = array();
 
-    $callback = $this->configuration['mode'] . '_find_entities_by_title';
-    $results = $this->$callback($string);
-
-    if (!empty($results)) {
-      $entities = entity_load($entity_type, array_keys($results));
+    $string = trim($string);
+    
+    // If our title is empty never return values
+    if (FALSE === empty($string)) {
+      $callback = $this->configuration['mode'] . '_find_entities_by_title';
+      $results = $this->$callback($string);
+  
+      if (!empty($results)) {
+        $entities = entity_load($entity_type, array_keys($results));
+      }
     }
-
+    
     return $entities;
   }
 
