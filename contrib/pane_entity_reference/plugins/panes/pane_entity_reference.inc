@@ -27,7 +27,7 @@ class pane_entity_reference extends pane_base {
     if (TRUE === isset($form_state['values']['entity_ids'])) {
       $ids = $form_state['values']['entity_ids'];
     }
-    
+
     // Sort the ids by their weight
     usort($ids, 'drupal_sort_weight');
 
@@ -183,46 +183,72 @@ class pane_entity_reference extends pane_base {
    */
   public function render() {
     $markup = '';
+    $entities = array();
+
+    $ids = array();
 
     if (TRUE === isset($this->data['ids']) && FALSE === empty($this->data['ids'])) {
-      $entity_ids = array();
+      $ids = $this->data['ids'];
+      usort($ids, 'drupal_sort_weight');
+    }
 
-      foreach ($this->data['ids'] as $entity_data) {
-        $entity_ids[] = $entity_data['reference'];
+
+    // Build array of entities from user-entered data
+    foreach ($ids as $entity_data) {
+      $matching_entities = $this->find_entities_by_id($entity_data['reference']);
+      if (0 < sizeof($matching_entities)) {
+        $entity = array_pop($matching_entities);
+        $entities[$entity_data['reference']] = $entity;
       }
+    }
 
-      // Get the appropriate entities
-      $entities = $this->find_entities_by_id($entity_ids);
+    // Pad out the number of entities, if appropriate
+    if (!empty($this->configuration['view']['min_results'])) {
+      while (count($entities) < $this->configuration['view']['min_results']){
 
-      // Pad out the number of entities, if appropriate
-      if(!empty($this->configuration['view']['min_results'])){
-        while(count($entities) < $this->configuration['view']['min_results']){
-
-          // ensure we have all eligible entities
-          if(empty($eligible_entities)) {
-            if($results = $this->executeView()){
-              $entity_type = $this->configuration['entity'];
-              $eligible_entities = entity_load($entity_type, array_keys($results));
-            }
-            else{
-              break;
-            }
+        // ensure we have all eligible entities
+        if (empty($eligible_entities)) {
+          if ($results = $this->executeView()) {
+            $entity_type = $this->configuration['entity'];
+            $eligible_entities = entity_load($entity_type, array_keys($results));
           }
-
-          // add the next non-duplicate eligible entity to the array
-          if($item = each($eligible_entities)){
-            if(empty($entities[$item['key']])){
-              $entities[$item['key']] = $item['value'];
-            }
-          }
-          else{
+          else {
             break;
           }
         }
+
+        // add the next non-duplicate eligible entity to the array
+        if ($item = each($eligible_entities)) {
+          if (empty($entities[$item['key']])) {
+            $entities[$item['key']] = $item['value'];
+          }
+        }
+        else {
+          break;
+        }
+      }
+    }
+
+    // And render them
+    $markup = entity_view($this->configuration['entity'], $entities, $this->configuration['view_mode']);
+
+
+    // Add more link, if appropriate
+    if (count($entities) > 0 && !empty($this->configuration['more_link'])) {
+      $url = parse_url($this->configuration['more_link']);
+
+      // Support query params, get them ready for l()
+      $query = array();
+      if(!empty($url['query'])) {
+        parse_str($url['query'], $query);
       }
 
-      // And render them
-      $markup = entity_view($this->configuration['entity'], $entities, $this->configuration['view_mode']);
+      $more_link_text = $this->configuration['more_link_text'];
+      if(empty($more_link_text)) $more_link_text = 'View more';
+      $markup['more_link'] = array(
+        '#type' => 'markup',
+        '#markup' => l($more_link_text, $url['path'], array('query' => $query, 'fragment' => (!empty($url['fragment']) ? $url['fragment'] : '') )),
+      );
     }
 
     return $markup;
@@ -238,6 +264,8 @@ class pane_entity_reference extends pane_base {
   public function container_edit_form(&$form_state = array()) {
     $mode = (TRUE === isset($this->configuration['mode'])) ? $this->configuration['mode'] : self::BY_BUNDLE;
     $multiplicity = (TRUE === isset($this->configuration['multiplicity'])) ? $this->configuration['multiplicity'] : 1;
+    $more_link = (TRUE === isset($this->configuration['more_link'])) ? $this->configuration['more_link'] : '';
+    $more_link_text = (TRUE === isset($this->configuration['more_link_text'])) ? $this->configuration['more_link_text'] : '';
 
     $values = range(1, 9);
     $multiplicity_values = array_combine($values, $values);
@@ -306,6 +334,22 @@ class pane_entity_reference extends pane_base {
       '#description' => t('Display mode used to render selections'),
       '#default_value' => (TRUE === isset($this->configuration['view_mode'])) ? $this->configuration['view_mode'] : '',
       '#required' => TRUE,
+    );
+
+    $form['more_link'] = array(
+      '#type' => 'textfield',
+      '#title' => t('More link'),
+      '#default_value' => $more_link,
+      '#required' => FALSE,
+      '#description' => t('Add a more link to the bottom of the pane.  Leave empty for no "more" link.'),
+    );
+
+    $form['more_link_text'] = array(
+      '#type' => 'textfield',
+      '#title' => t('More link text'),
+      '#default_value' => $more_link_text,
+      '#required' => FALSE,
+      '#description' => t('By default the link text is "View more".  Override text used for "more" link here.'),
     );
 
     return $form;
@@ -422,6 +466,14 @@ class pane_entity_reference extends pane_base {
       $configuration['multiplicity'] = (int) $form_state['values'][$this->container]['configuration']['multiplicity'];
     }
 
+    if (TRUE === isset($form_state['values'][$this->container]['configuration']['more_link'])) {
+      $configuration['more_link'] = $form_state['values'][$this->container]['configuration']['more_link'];
+    }
+
+    if (TRUE === isset($form_state['values'][$this->container]['configuration']['more_link_text'])) {
+      $configuration['more_link_text'] = $form_state['values'][$this->container]['configuration']['more_link_text'];
+    }
+
     if (TRUE === isset($form_state['values'][$this->container]['configuration']['view_mode'])) {
       $configuration['view_mode'] = (string) $form_state['values'][$this->container]['configuration']['view_mode'];
     }
@@ -504,11 +556,11 @@ class pane_entity_reference extends pane_base {
     $ids = array_intersect($ids, $keys);
 
     $output = array();
-    
+
     foreach ($ids as $id) {
       $output[$id] = $results[$entity_type][$id];
     }
-    
+
     return $output;
   }
 
@@ -529,17 +581,17 @@ class pane_entity_reference extends pane_base {
     $entities = array();
 
     $string = trim($string);
-    
+
     // If our title is empty never return values
     if (FALSE === empty($string)) {
       $callback = $this->configuration['mode'] . '_find_entities_by_title';
       $results = $this->$callback($string);
-  
+
       if (!empty($results)) {
         $entities = entity_load($entity_type, array_keys($results));
       }
     }
-    
+
     return $entities;
   }
 

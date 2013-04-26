@@ -73,29 +73,32 @@ function pane_pane_content_type_render($subtype_id, $conf, $args, $contexts) {
 
   $pane = pane_load_container($subtype_id, $lang);
 
+
+  if ($pane == FALSE) return;
+
   $block = new stdClass;
+  $block->title = $pane->title;
 
-  if (FALSE !== $pane) {
-    $block->title = $pane->title;
+  // Make sure we can use render arrays as well as HTML
+  $markup = $pane->render();
 
-    // Make sure we can use render arrays as well as HTML
-    $markup = $pane->render();
-
-    if (TRUE === is_array($markup)) {
-      $markup = render($markup);
-    }
-
-    // Wrap pane in a wrapper class to facilitate theming
-    $wrapper_class = 'panel-pane-wrapper pane-'. str_replace('_', '-', $subtype_id) .'-wrapper';
-    $block->pane_prefix = '<div class="'. $wrapper_class .'">';
-    $block->pane_suffix = '</div>';
-
-    $block->content = array(
-      '#markup' => $markup,
-      '#prefix' => '<div class = "'. str_replace('_', '-', substr($pane->container, 0, -12)) .'">',
-      '#suffix' => '</div>',
-    );
+  if (TRUE === is_array($markup)) {
+    $markup = render($markup);
   }
+
+  // Return empty block if there's no content in the block
+  if(empty($markup)) return;
+
+  // Wrap pane in a wrapper class to facilitate theming
+  $wrapper_class = 'panel-pane-wrapper pane-'. str_replace('_', '-', $subtype_id) .'-wrapper';
+  $block->pane_prefix = '<div class="'. $wrapper_class .'">';
+  $block->pane_suffix = '</div>';
+
+  $block->content = array(
+    '#markup' => $markup,
+    '#prefix' => '<div class = "'. str_replace('_', '-', substr($pane->container, 0, -12)) .'">',
+    '#suffix' => '</div>',
+  );
 
   return $block;
 }
