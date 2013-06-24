@@ -2,6 +2,8 @@
 class pane_entity_reference extends pane_base {
   const BY_BUNDLE = 'bundle';
   const BY_VIEW = 'view';
+  const OUTPUT_DISPLAY_MODE = 'display_mode';
+  const OUTPUT_VIEW = 'view';
 
   /**
    * Provides the data edit form
@@ -184,6 +186,7 @@ class pane_entity_reference extends pane_base {
   public function render() {
     $markup = '';
     $entities = array();
+    $output_mode = (TRUE === isset($this->configuration['output_mode'])) ? $this->configuration['output_mode'] : self::OUTPUT_DISPLAY_MODE;
 
     $ids = array();
 
@@ -229,9 +232,16 @@ class pane_entity_reference extends pane_base {
       }
     }
 
-    // And render them
-    $markup = entity_view($this->configuration['entity'], $entities, $this->configuration['view_mode']);
+    // Render using the appropriate output mode
+    switch ($output_mode) {
+      case self::OUTPUT_DISPLAY_MODE:
+        $markup = $this->render_display_mode($entities);
+        break;
 
+      case self::OUTPUT_VIEW:
+        $markup = $this->render_view($entities);
+        break;
+    }
 
     // Add more link, if appropriate
     if (count($entities) > 0 && !empty($this->configuration['more_link'])) {
@@ -255,6 +265,31 @@ class pane_entity_reference extends pane_base {
   }
 
   /**
+   * Renders the output using the selected display mode
+   *
+   * @param array $entities
+   *
+   * @return string
+   */
+  protected function render_display_mode(&$entities) {
+    return entity_view($this->configuration['entity'], $entities, $this->configuration['view_mode']);
+  }
+
+  /**
+   * Renders the output using the selected view
+   *
+   * @param array $entities
+   *
+   * @return string
+   */
+  protected function render_view(&$entities) {
+    $ids = implode(',', array_keys($entities));
+    list($view, $display) = explode(':', $this->configuration['display_view']);
+    
+    return views_embed_view($view, $display, $ids);
+  }
+
+  /**
    * Provides the container edit form
    *
    * @see pane_base::container_edit_form()
@@ -266,6 +301,7 @@ class pane_entity_reference extends pane_base {
     $multiplicity = (TRUE === isset($this->configuration['multiplicity'])) ? $this->configuration['multiplicity'] : 1;
     $more_link = (TRUE === isset($this->configuration['more_link'])) ? $this->configuration['more_link'] : '';
     $more_link_text = (TRUE === isset($this->configuration['more_link_text'])) ? $this->configuration['more_link_text'] : '';
+    $output_mode = (TRUE === isset($this->configuration['output_mode'])) ? $this->configuration['output_mode'] : self::OUTPUT_DISPLAY_MODE;
 
     $values = range(1, 9);
     $multiplicity_values = array_combine($values, $values);
@@ -319,7 +355,7 @@ class pane_entity_reference extends pane_base {
 
     switch ($mode) {
       case self::BY_BUNDLE:
-        $this->get_bundle_form($form, $form_state);
+        $this->get_bundle_form($form, $form_state, $entity);
         break;
 
       case self::BY_VIEW:
@@ -327,14 +363,29 @@ class pane_entity_reference extends pane_base {
         break;
     }
 
-    $form['view_mode'] = array(
+    $form['output_mode'] = array(
       '#type' => 'select',
-      '#title' => t('View Mode'),
-      '#options' => $display_modes[$entity],
-      '#description' => t('Display mode used to render selections'),
-      '#default_value' => (TRUE === isset($this->configuration['view_mode'])) ? $this->configuration['view_mode'] : '',
-      '#required' => TRUE,
+      '#title' => t('Output mode'),
+      '#default_value' => $output_mode,
+      '#ajax' => array(
+        'callback' => 'pane_plugin_change_ajax',
+        'wrapper' => $this->container . '-config',
+      ),
+      '#options' => array(
+        self::OUTPUT_DISPLAY_MODE => t('Display mode'),
+        self::OUTPUT_VIEW => t('View')
+      ),
     );
+
+    switch ($output_mode) {
+      case self::OUTPUT_DISPLAY_MODE:
+        $this->get_output_display_form($form, $form_state, $entity);
+        break;
+
+      case self::OUTPUT_VIEW:
+        $this->get_output_view_form($form, $form_state);
+        break;
+    }
 
     $form['more_link'] = array(
       '#type' => 'textfield',
@@ -353,6 +404,61 @@ class pane_entity_reference extends pane_base {
     );
 
     return $form;
+  }
+
+  /**
+   * Provides form for selecting a display mode to render the referenced entities
+   *
+   * @param array $form
+   * @param array $form_state
+   * @param string $entity
+   */
+  protected function get_output_display_form(&$form, &$form_state, $entity) {
+    $display_modes = array();
+    
+    foreach (entity_get_info() as $name => $info) {
+      foreach ($info['view modes'] as $machine_name => $mode_info) {
+        $display_modes[$name][$machine_name] = $mode_info['label'];
+      }
+    }
+    
+    $form['view_mode'] = array(
+      '#type' => 'select',
+      '#title' => t('View Mode'),
+      '#options' => $display_modes[$entity],
+      '#description' => t('Display mode used to render selections'),
+      '#default_value' => (TRUE === isset($this->configuration['view_mode'])) ? $this->configuration['view_mode'] : '',
+      '#required' => TRUE,
+    );
+  }
+
+  /**
+   * Provides form for selecting a view to render the referenced entities
+   *
+   * @param array $form
+   * @param array $form_state
+   */
+  protected function get_output_view_form(&$form, &$form_state) {
+    $view_settings = empty($this->configuration['output_view']) ? '' : $this->configuration['output_view'];
+    $views = views_get_enabled_views();
+
+    $options = array();
+    foreach ($views as $view) {
+      foreach (array_keys($view->display) as $id) {
+        $options[$view->name . ':' . $id] = $view->name . ' - ' . $view->display[$id]->display_title;
+      }
+    }
+    
+     if ($options) {
+       $form['display_view'] = array(
+         '#type' => 'select',
+         '#title' => t('View used to display the entities'),
+         '#required' => TRUE,
+         '#options' => $options,
+         '#default_value' => $view_settings,
+         '#description' => '<p>' . t('Choose the view and display that outputs the selected entities') . '</p>',
+       );
+     }
   }
 
   /**
@@ -478,8 +584,16 @@ class pane_entity_reference extends pane_base {
       $configuration['view_mode'] = (string) $form_state['values'][$this->container]['configuration']['view_mode'];
     }
 
-    if(TRUE === isset($form_state['values'][$this->container]['configuration']['view'])){
+    if (TRUE === isset($form_state['values'][$this->container]['configuration']['view'])){
       $configuration['view'] = $form_state['values'][$this->container]['configuration']['view'];
+    }
+
+    if (TRUE === isset($form_state['values'][$this->container]['configuration']['output_mode'])) {
+      $configuration['output_mode'] = $form_state['values'][$this->container]['configuration']['output_mode'];
+    }
+
+    if (TRUE === isset($form_state['values'][$this->container]['configuration']['display_view'])) {
+      $configuration['display_view'] = $form_state['values'][$this->container]['configuration']['display_view'];
     }
 
     if (FALSE === empty($configuration)) {
