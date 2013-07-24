@@ -439,7 +439,7 @@ class pane_entity_reference extends pane_base {
    * @param array $form_state
    */
   protected function get_output_view_form(&$form, &$form_state) {
-    $view_settings = empty($this->configuration['output_view']) ? '' : $this->configuration['output_view'];
+    $view_settings = empty($this->configuration['display_view']) ? '' : $this->configuration['display_view'];
     $views = views_get_enabled_views();
 
     $options = array();
