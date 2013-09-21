@@ -112,11 +112,11 @@ function pane_pane_content_type_render($subtype_id, $conf, $args, $contexts) {
  *
  * @return string
  */
-function pane_admin_title($subtype, $conf, $context = NULL) {
-  $pane = pane_load_pane($conf['content']);
-
+function pane_pane_content_type_admin_title($subtype, $conf, $context = NULL) {
+  $pane = pane_load_container($subtype);
   if (FALSE !== $pane) {
-    return t('Custom pane (%title)', array('%title' => $pane->title));
+    $title = strip_tags($pane->title);
+    return t('Custom pane: !title', array('!title' => $title));
   }
 
   return NULL;
