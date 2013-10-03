@@ -219,7 +219,8 @@ function pane_block_configure($delta = '') {
   $form = array();
 
   if (FALSE !== $container) {
-    $form = $container->data_edit_form_wrapper();
+    // Set to a child to avoid issues with #tree
+    $form['pane'] = $container->data_edit_form_wrapper();
   }
 
   return $form;
@@ -236,8 +237,17 @@ function pane_block_save($delta = '', $edit = array()) {
 
   if (FALSE !== $container) {
     $form_state = array('values' => $edit);
+    
+    // Merge pane values into form_state because of #tree issues
+    $form_state['values'] += $edit['pane'];
+    
+    // Make it look like we're inside CTools
+    $form_state['process_input'] = TRUE;
+    
     $form = array();
 
+    // Manually trigger the validate function in case it needs to actually make changes
+    $container->data_edit_form_validate($form, $form_state);
     $container->data_edit_form_wrapper_submit($form, $form_state);
     $container->save_data();
   }
