@@ -15,8 +15,6 @@ class pane_entity_reference extends pane_base {
   public function data_edit_form($form = array(), &$form_state = array()) {
     $entity_type = $this->configuration['entity'];
 
-    $form['#tree'] = TRUE;
-
     $form['references'] = array(
       '#type' => 'fieldset',
       '#title' => t('References'),
@@ -285,7 +283,7 @@ class pane_entity_reference extends pane_base {
   protected function render_view(&$entities) {
     $ids = implode(',', array_keys($entities));
     list($view, $display) = explode(':', $this->configuration['display_view']);
-    
+
     return views_embed_view($view, $display, $ids);
   }
 
@@ -415,13 +413,13 @@ class pane_entity_reference extends pane_base {
    */
   protected function get_output_display_form(&$form, &$form_state, $entity) {
     $display_modes = array();
-    
+
     foreach (entity_get_info() as $name => $info) {
       foreach ($info['view modes'] as $machine_name => $mode_info) {
         $display_modes[$name][$machine_name] = $mode_info['label'];
       }
     }
-    
+
     $form['view_mode'] = array(
       '#type' => 'select',
       '#title' => t('View Mode'),
@@ -448,7 +446,7 @@ class pane_entity_reference extends pane_base {
         $options[$view->name . ':' . $id] = $view->name . ' - ' . $view->display[$id]->display_title;
       }
     }
-    
+
      if ($options) {
        $form['display_view'] = array(
          '#type' => 'select',
