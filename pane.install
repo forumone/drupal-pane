@@ -113,5 +113,5 @@ function pane_update_7201() {
  * Update language field to 15 characters
  */
 function pane_update_7202() {
-  db_change_field('pane_data', 'lang', 'lang', array('length' => 15, 'type' => 'varchar'), array('primary key' => array('name')));
+  db_change_field('pane_data', 'lang', 'lang', array('length' => 15, 'type' => 'varchar'));
 }
