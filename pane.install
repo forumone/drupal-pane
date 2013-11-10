@@ -76,7 +76,7 @@ function pane_schema() {
       'lang' => array(
         'description' => 'The language for the data',
         'type' => 'varchar',
-        'length' => 6,
+        'length' => 15,
       ),
       'data' => array(
         'description' => 'The data for the pane',
@@ -107,4 +107,11 @@ function pane_update_7201() {
   ));
 
   return $return;
+}
+
+/**
+ * Update language field to 15 characters
+ */
+function pane_update_7202() {
+  db_change_field('pane_data', 'lang', 'lang', array('length' => 15, 'type' => 'varchar'), array('primary key' => array('name')));
 }
