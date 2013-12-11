@@ -82,10 +82,6 @@ function pane_pane_content_type_render($subtype_id, $conf, $args, $contexts) {
   // Make sure we can use render arrays as well as HTML
   $markup = $pane->render();
 
-  if (TRUE === is_array($markup)) {
-    $markup = render($markup);
-  }
-
   // Return empty block if there's no content in the block
   if(empty($markup)) return;
 

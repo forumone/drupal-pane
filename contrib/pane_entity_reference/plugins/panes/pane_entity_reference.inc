@@ -247,17 +247,23 @@ class pane_entity_reference extends pane_base {
 
       // Support query params, get them ready for l()
       $query = array();
-      if(!empty($url['query'])) {
+      if (!empty($url['query'])) {
         parse_str($url['query'], $query);
       }
 
       $more_link_text = $this->configuration['more_link_text'];
-      if(empty($more_link_text)) $more_link_text = 'View more';
+      if (empty($more_link_text)) $more_link_text = 'View more';
       $markup['more_link'] = array(
-        '#type' => 'markup',
-        '#markup' => l($more_link_text, $url['path'], array('query' => $query, 'fragment' => (!empty($url['fragment']) ? $url['fragment'] : '') )),
+        '#link_text' => $more_link_text,
+        '#accessible_text' => $this->configuration['view']['args'],
+        '#path' => $url['path'],
+        '#query' => $query,
+        '#fragment' => (!empty($url['fragment']) ? $url['fragment'] : ''),
+        '#theme' => 'pane_entity_reference_more_link',
       );
     }
+
+    if (is_array($markup)) $markup = render($markup);
 
     return $markup;
   }

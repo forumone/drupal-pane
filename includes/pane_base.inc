@@ -119,6 +119,7 @@ abstract class pane_base {
   public function save_data() {
     $current_data = $this->fetch_data();
     $current_data->name = $this->container . '_' . $current_data->lang;
+    $this->data['title'] = $this->title;
     $current_data->data = $this->data;
     $current_data->container = $this->container;
     $current_data->lang = $this->lang;
@@ -136,6 +137,15 @@ abstract class pane_base {
   public function load_data() {
     $current_data = $this->fetch_data();
     $this->data = $current_data->data;
+
+    if( !empty($current_data->data['title']) ) {
+      if ($current_data->data['title'] == '<none>') {
+        $this->title = '';
+      }
+      else{
+        $this->title = $current_data->data['title'];
+      }
+    }
 
     return $this;
   }

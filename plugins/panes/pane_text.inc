@@ -36,6 +36,7 @@ class pane_text extends pane_base {
    */
   public function data_edit_form_submit(&$form, &$form_state) {
     $this->data = $form_state['values']['description'];
+    $this->title = $form_state['values']['title'];
   }
 
   /**

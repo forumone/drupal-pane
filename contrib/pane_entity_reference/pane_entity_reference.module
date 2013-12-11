@@ -21,7 +21,7 @@ function pane_entity_reference_pane_plugins() {
 
 /**
  * Implements hook_pane_registry
- * 
+ *
  * @return array
  */
 function pane_entity_reference_pane_registry() {
@@ -38,38 +38,40 @@ function pane_entity_reference_pane_registry() {
 
 /**
  * Implements hook_theme
- * 
+ *
  * @return array
  */
 function pane_entity_reference_theme() {
-  $theme = array();
-  
-  $theme['pane_entity_reference_reorder_form'] = array(
-    'render element' => 'element',  
+  return array(
+    'pane_entity_reference_reorder_form' => array(
+      'render element' => 'element',
+    ),
+    'pane_entity_reference_more_link' => array(
+      'render element' => 'element',
+    ),
   );
-  return $theme;
 }
 
 /**
  * Theme function to provide reorderable form
- * 
+ *
  * @param array $variables
  * @return string
  */
 function theme_pane_entity_reference_reorder_form(&$variables) {
   $element = $variables['element'];
-  
+
   $rows = array();
-  
+
   foreach (element_children($element, TRUE) as $name) {
     $element[$name]['weight']['#attributes']['class'][] = 'type-order-weight';
-    
+
     $rows[] = array(
       'data' => array(
         drupal_render($element[$name]['reference']),
         drupal_render($element[$name]['weight']),
       ),
-      'class' => array('draggable'),  
+      'class' => array('draggable'),
     );
   }
 
@@ -77,31 +79,58 @@ function theme_pane_entity_reference_reorder_form(&$variables) {
   $output = drupal_render_children($element);
   $output .= theme('table', array('header' => $headers, 'rows' => $rows, 'attributes' => array('id' => 'group-by-order')));
   drupal_add_tabledrag('group-by-order', 'order', 'sibling', 'type-order-weight', NULL, NULL, TRUE);
-  
+
+  return $output;
+}
+
+/**
+ * Returns HTML for the view more link.
+ *
+ * @param array $variables
+ * @return string
+ */
+function theme_pane_entity_reference_more_link(&$variables) {
+  $link_text = check_plain($variables['element']['#link_text']);
+  $accessible_text = check_plain($variables['element']['#accessible_text']);
+  $path = $variables['element']['#path'];
+  $query = $variables['element']['#query'];
+  $fragment = $variables['element']['#fragment'];
+
+  $output = l(
+    $link_text . '<span class="element-invisible"> ' . $accessible_text . '</span>',
+    $path,
+    array(
+      'attributes' => array('class' => 'view-more'),
+      'html' => TRUE,
+      'query' => $query,
+      'fragment' => $fragment,
+    )
+  );
+
   return $output;
 }
 
 /**
  * Implements hook_menu
- * 
+ *
  * @return array
  */
 function pane_entity_reference_menu() {
   $items = array();
-  
+
   $items['entityreference-autocomplete/%'] = array(
     'page callback' => 'pane_entity_reference_autocomplete_callback',
     'access callback' => TRUE,
     'page arguments' => array(1),
     'type' => MENU_CALLBACK,
   );
-  
+
   return $items;
 }
 
 /**
  * Form submit handler for adding new entity reference
- * 
+ *
  * @param array $form
  * @param array $form_state
  */
@@ -113,22 +142,22 @@ function pane_entity_reference_add_submit(&$form, &$form_state) {
 
 /**
  * Menu callback for autocomplete
- * 
+ *
  * @param string $container
  * @param string $title
- * 
+ *
  * @return string
  */
 function pane_entity_reference_autocomplete_callback($container, $title = '') {
   $pane = pane_load_container($container);
   $entities = $pane->find_entities_by_title($title);
   $entity_type = $pane->getConfigurationValue('entity');
-  
+
   $options = array();
-  
+
   foreach ($entities as $entity_id => $entity) {
     $options[entity_label($entity_type, $entity) . " [id: $entity_id]"] = '<span class="autocomplete_title">' . check_plain(entity_label($entity_type, $entity)) . '</span>';
   }
-  
+
   drupal_json_output($options);
 }
