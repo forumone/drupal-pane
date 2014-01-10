@@ -159,7 +159,7 @@ function pane_pane_plugins() {
 function pane_block_info() {
   $block = array();
   foreach (pane_get_containers() as $container) {
-    $block[$container->getContainer()] = array(
+    $block[$container->name] = array(
       'info' => "Pane - $container->title - block",
       'cache' => DRUPAL_CACHE_GLOBAL,
     );
@@ -321,30 +321,47 @@ function _pane_get_class($plugin) {
 /**
  * Returns an array of available custom translatable panes
  *
+ * @param boolean $load_data
+ *   Whether we should load the data along with the container
+ *   
  * @return array
  */
-function pane_get_containers() {
-  return pane_load_container();
+function pane_get_containers($load_data = FALSE) {
+  return pane_load_container(NULL, LANGUAGE_NONE, $load_data);
 }
 
 /**
  * Load a pane and perform token replacement
  *
- * @param string
+ * @param string $name
+ *   The name of the pane to load
+ *   
+ * @param string $lang
+ *   The language to load content for
+ *   
+ * @param boolean $load_data
+ *   Whether to load the data along with the container
+ *   
  * @return array
  */
-function pane_load_container($name = NULL, $lang = LANGUAGE_NONE) {
+function pane_load_container($name = NULL, $lang = LANGUAGE_NONE, $load_data = TRUE) {
   ctools_include('export');
 
   if (NULL !== $name) {
     $presets = ctools_export_load_object('pane_container', 'names', array($name));
-    return isset($presets[$name]) ? pane_get_data($presets[$name], $lang) : FALSE;
+    $container = FALSE;
+    
+    if (TRUE === isset($presets[$name])) {
+      $container = (TRUE === $load_data) ? pane_get_data($presets[$name]) : $presets[$name];
+    }
+    
+    return $container;
   }
   else {
     $containers = array();
 
     foreach (ctools_export_load_object('pane_container') as $container) {
-      $containers[] = pane_get_data($container, $lang);
+      $containers[] = (TRUE === $load_data) ? pane_get_data($container, $lang) : $container;
     }
 
     return $containers;

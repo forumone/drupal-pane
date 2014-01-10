@@ -9,7 +9,7 @@
 function pane_panes_list($form, &$form_state) {
   $form['#tree'] = TRUE;
 
-  $panes = pane_get_containers();
+  $panes = pane_get_containers(TRUE);
   $blanks = (TRUE === isset($form_state['blanks'])) ? $form_state['blanks'] : 0;
 
   $plugins = array();
