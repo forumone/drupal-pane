@@ -8,7 +8,8 @@ $plugin = array(
   'content type' => 'pane_pane_content_type_content_type',
   'js' => array(
     'misc/autocomplete.js'
-  )
+  ),
+  'all contexts' => TRUE,
 );
 
 /**
@@ -28,7 +29,7 @@ function pane_pane_content_type_content_types() {
       )
     );
     
-    $types[$container->container] = $info;
+    $types[$container->name] = $info;
   }
   
   return $types;
@@ -97,6 +98,11 @@ function pane_pane_content_type_render($subtype_id, $conf, $args, $contexts) {
   if (empty($markup))
     return;
     
+  // Perform context substitutions
+  if (FALSE === empty($contexts)) {
+    $markup = ctools_context_keyword_substitute($markup, array(), $contexts);
+  }
+  
   $block->content = array(
     '#markup' => $markup,
   );
