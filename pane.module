@@ -352,7 +352,7 @@ function pane_load_container($name = NULL, $lang = LANGUAGE_NONE, $load_data = T
     $container = FALSE;
     
     if (TRUE === isset($presets[$name])) {
-      $container = (TRUE === $load_data) ? pane_get_data($presets[$name]) : $presets[$name];
+      $container = (TRUE === $load_data) ? pane_get_data($presets[$name], $lang) : $presets[$name];
     }
     
     return $container;
