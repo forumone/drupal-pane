@@ -97,15 +97,8 @@ function pane_pane_content_type_render($subtype_id, $conf, $args, $contexts) {
   if (empty($markup))
     return;
     
-    // Wrap pane in a wrapper class to facilitate theming
-  $wrapper_class = 'panel-pane-wrapper pane-' . str_replace('_', '-', $subtype_id) . '-wrapper';
-  $block->pane_prefix = '<div class="' . $wrapper_class . '">';
-  $block->pane_suffix = '</div>';
-  
   $block->content = array(
     '#markup' => $markup,
-    '#prefix' => '<div class = "' . str_replace('_', '-', substr($pane->container, 0, - 12)) . '">',
-    '#suffix' => '</div>'
   );
   
   return $block;
