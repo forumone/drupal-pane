@@ -287,7 +287,7 @@ class pane_entity_reference extends pane_base {
    * @return string
    */
   protected function render_view(&$entities) {
-    $ids = implode(',', array_keys($entities));
+    $ids = implode('+', array_keys($entities));
     list($view, $display) = explode(':', $this->configuration['display_view']);
 
     return views_embed_view($view, $display, $ids);
