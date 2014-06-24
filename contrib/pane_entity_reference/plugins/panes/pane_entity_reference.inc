@@ -747,7 +747,7 @@ class pane_entity_reference extends pane_base {
     }
     else {
       // array_map is called to trim whitespaces from the arguments.
-      $args = array_map('trim', explode(',', $args_string));
+      $args = array_map('trim', str_getcsv($args_string, ',', '"'));
     }
 
     // Check that the view is valid and the display still exists.
