@@ -187,7 +187,7 @@ function pane_block_view($delta = '') {
   $block = array();
 
   if (FALSE !== $container) {
-    $block['subject'] = $container->title;
+    $block['subject'] = filter_xss($container->title);
     $block['content'] = array(
       '#markup' => $container->render(),
       '#prefix' => '<div class = "'. str_replace('_', '-', substr($container->name, 0, -12)) .'">',
