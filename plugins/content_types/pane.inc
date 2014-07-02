@@ -22,7 +22,7 @@ function pane_pane_content_type_content_types() {
   
   foreach ( pane_get_containers() as $container ) {
     $info = array(
-      'title' => check_xss($container->title),
+      'title' => $container->title,
       'category' => t('Custom panes'),
       'js' => array(
         'misc/autocomplete.js'
@@ -48,7 +48,7 @@ function pane_pane_content_type_content_type($subtype_id) {
   
   if (FALSE !== $container) {
     $info = array(
-      'title' => $container->title,
+      'title' => filter_xss($container->title),
       'category' => t('Custom panes'),
       'js' => array(
         'misc/autocomplete.js'
