@@ -22,7 +22,7 @@ function pane_pane_content_type_content_types() {
   
   foreach ( pane_get_containers() as $container ) {
     $info = array(
-      'title' => $container->title,
+      'title' => check_xss($container->title),
       'category' => t('Custom panes'),
       'js' => array(
         'misc/autocomplete.js'

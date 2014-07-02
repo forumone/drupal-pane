@@ -34,7 +34,7 @@ function pane_panes_list($form, &$form_state) {
 
     $form[$pane->container] = array(
       '#type' => 'fieldset',
-      '#title' => $pane->title,
+      '#title' => filter_xss($pane->title),
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
       '#group' => 'panes',
