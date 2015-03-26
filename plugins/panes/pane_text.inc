@@ -8,6 +8,7 @@ class pane_text extends pane_base {
    * @return array
    */
   public function data_edit_form($form = array(), &$form_state = array()) {
+    $form = parent::data_edit_form($form, $form_state);
     $form['description'] = array(
       '#type' => 'text_format',
       '#title' => t('Description'),
@@ -36,24 +37,26 @@ class pane_text extends pane_base {
    */
   public function data_edit_form_submit(&$form, &$form_state) {
     $this->data = $form_state['values']['description'];
-    $this->title = $form_state['values']['title'];
   }
 
   /**
-   * Renders the pane text
+   * Renders the pane text.
    *
    * @see pane_base::render()
    *
-   * @return string
+   * @return array
+   *   Render array.
    */
   public function render() {
-    $text = '';
-
+    $render = array();
     if (TRUE === isset($this->data['value'])) {
-      $text = check_markup($this->data['value'], $this->data['format']);
+      $render = parent::render();
+      $render += array(
+        '#markup' => check_markup($this->data['value'], $this->data['format']),
+      );
     }
 
-    return $text;
+    return $render;
   }
 
   public function container_edit_form(&$form_state = array()) {

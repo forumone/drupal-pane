@@ -180,7 +180,15 @@ abstract class pane_base {
    *
    * @return array
    */
-  public abstract function data_edit_form($form = array(), &$form_state = array());
+  public function data_edit_form($form = array(), &$form_state = array()) {
+    $form['title'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Instance Title'),
+      '#default_value' => isset($this->title) ? $this->title : '',
+    );
+
+    return $form;
+  }
 
   /**
    * Signature for data edit form validate function
@@ -201,9 +209,19 @@ abstract class pane_base {
   /**
    * Signature for pane rendering
    *
-   * @return string
+   * @return array
+   *   Render array.
    */
-  public abstract function render();
+  public function render() {
+    return array(
+      '#contextual_links' =>  array(
+        'pane' => array(
+          "admin/structure/pane/$this->container/edit",
+          array(),
+        ),
+      ),
+    );
+  }
 
   /**
    * Signature for container edit form
@@ -225,23 +243,19 @@ abstract class pane_base {
 
   public function data_edit_form_wrapper_submit(&$form, &$form_state) {
     $this->lang = $form_state['values']['language'];
+    $this->title = $form_state['values']['title'];
     $this->data_edit_form_submit($form, $form_state);
   }
 
   public function data_edit_form_wrapper($form = array(), &$form_state = array()) {
-    global $language;
-
-    $lang = LANGUAGE_NONE;
-
-    if (drupal_multilingual()) {
-      $lang = (TRUE === isset($form_state['values']['language'])) ? $form_state['values']['language'] : $language->language;
-    }
-
     $form['#tree'] = TRUE;
 
     ctools_add_js('auto-submit');
 
-    if (drupal_multilingual()) {
+    if (module_exists('locale') && drupal_multilingual()) {
+      global $language;
+      $lang = (TRUE === isset($form_state['values']['language'])) ? $form_state['values']['language'] : $language->language;
+
       $form['language'] = array(
         '#type' => 'select',
         '#title' => t('Language'),

@@ -22,7 +22,7 @@ function pane_pane_content_type_content_types() {
   
   foreach ( pane_get_containers() as $container ) {
     $info = array(
-      'title' => $container->title,
+      'title' => $container->description,
       'category' => t('Custom panes'),
       'js' => array(
         'misc/autocomplete.js'
@@ -45,10 +45,10 @@ function pane_pane_content_type_content_types() {
 function pane_pane_content_type_content_type($subtype_id) {
   $container = pane_load_container($subtype_id);
   $info = array();
-  
+
   if (FALSE !== $container) {
     $info = array(
-      'title' => filter_xss($container->title),
+      'title' => check_plain($container->description),
       'category' => t('Custom panes'),
       'js' => array(
         'misc/autocomplete.js'
@@ -88,24 +88,18 @@ function pane_pane_content_type_render($subtype_id, $conf, $args, $contexts) {
   $block->title = empty($pane->data['override_title']) ? $pane->title : $pane->data['override_title_text'];
   
   // Make sure we can use render arrays as well as HTML
-  $markup = $pane->render();
-  
-  if (TRUE === is_array($markup)) {
-    $markup = render($markup);
-  }
+  $render = $pane->render();
   
   // Return empty block if there's no content in the block
-  if (empty($markup))
+  if (empty($render))
     return;
     
   // Perform context substitutions
-  if (FALSE === empty($contexts)) {
+ /* if (FALSE === empty($contexts)) {
     $markup = ctools_context_keyword_substitute($markup, array(), $contexts);
-  }
+  }*/
   
-  $block->content = array(
-    '#markup' => $markup,
-  );
+  $block->content = $render;
   
   return $block;
 }
@@ -122,9 +116,8 @@ function pane_pane_content_type_render($subtype_id, $conf, $args, $contexts) {
 function pane_pane_content_type_admin_title($subtype, $conf, $context = NULL) {
   $pane = pane_load_container($subtype);
   if (FALSE !== $pane) {
-    $title = strip_tags($pane->title);
     return t('Custom pane: !title', array(
-      '!title' => $title
+      '!title' => check_plain($pane->description),
     ));
   }
   
@@ -162,8 +155,18 @@ function pane_pane_content_type_edit_form($form, &$form_state) {
   }
   
   $container = pane_load_container($form_state['subtype_name'], $lang);
-  return $container->data_edit_form_wrapper($form, $form_state);
+  
+  // Verify the user has access to edit the pane
+  if (pane_edit_access($container)) {
+    return $container->data_edit_form_wrapper($form, $form_state);
+  }
+  else {
+    return array('error' => array(
+      '#markup' => theme('pane_access_denied', array('pane' => $container))
+    ));
+  }
 }
+
 function pane_pane_content_type_edit_form_validate(&$form, &$form_state) {
   $container = pane_load_container($form_state['subtype_name']);
   $container->data_edit_form_validate($form, $form_state);

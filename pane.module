@@ -1,13 +1,6 @@
 <?php
 
 /**
- * Implements hook_init().
- */
-function pane_init() {
-  drupal_add_js(drupal_get_path('module', 'pane') .'/pane.js');
-}
-
-/**
  * Implements hook_menu().
  *
  * @return array
@@ -19,15 +12,40 @@ function pane_menu() {
     'title' => 'Panes',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('pane_panes_list'),
-    'access arguments' => array('administer panes'),
+    'access callback' => 'pane_list_access',
     'type' => MENU_NORMAL_ITEM,
     'file' => 'pane.admin.inc',
   );
   $items['admin/structure/pane/list'] = array(
     'title' => 'List',
-    'access arguments' => array('administer panes'),
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
+  );
+  $items['admin/structure/pane/add'] = array(
+    'title' => 'Add pane',
+    'type' => MENU_LOCAL_ACTION,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('pane_panes_configure'),
+    'access arguments' => array('administer panes'),
+    'file' => 'pane.admin.inc',
+  );
+  $items['admin/structure/pane/%pane/configure'] = array(
+    'title' => 'Edit pane configuration',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('pane_panes_configure', 3),
+    'access callback' => 'pane_edit_access',
+    'access arguments' => array(3),
+    'file' => 'pane.admin.inc',
+  );
+  $items['admin/structure/pane/%pane/edit'] = array(
+    'title' => 'Edit pane content',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('pane_panes_edit', 3),
+    'access callback' => 'pane_edit_access',
+    'access arguments' => array(3),
+    'file' => 'pane.admin.inc',
+    'type' => MENU_LOCAL_ACTION,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
   );
 
   return $items;
@@ -39,16 +57,25 @@ function pane_menu() {
  * @return array
  */
 function pane_permission() {
-  return array(
-    'administer pane settings' => array(
-      'title' => t('Administer pane settings'),
-      'description' => t('Administer pane settings'),
-    ),
+  $permissions = array(
     'administer panes' => array(
-      'title' => t('Edit pane content'),
-      'description' => t('Edit pane content'),
+      'title' => t('Administer panes'),
+      'description' => t('Users with this permission can fully administer all panes.'),
+    ),
+    'view panes' => array(
+      'title' => t('View panes'),
+      'description' => t('Ability to view listing of panes.'),
     ),
   );
+
+  foreach (pane_get_containers(FALSE) as $container) {
+    $permissions["pane $container->name update"] = array(
+      'title' => t('Update pane:  %description', array('%description' => $container->description)),
+      'description' => t('Update %description', array('%description' => $container->description)),
+    );
+  }
+
+  return $permissions;
 }
 
 /**
@@ -158,9 +185,9 @@ function pane_pane_plugins() {
  */
 function pane_block_info() {
   $block = array();
-  foreach (pane_get_containers() as $container) {
+  foreach (pane_get_containers(FALSE) as $container) {
     $block[$container->name] = array(
-      'info' => "Pane - $container->title - block",
+      'info' => "Pane: $container->description",
       'cache' => DRUPAL_CACHE_GLOBAL,
     );
   }
@@ -180,77 +207,20 @@ function pane_block_view($delta = '') {
   $lang = LANGUAGE_NONE;
 
   if (drupal_multilingual()) {
-    $lang = (TRUE === isset($form_state['values']['language'])) ? $form_state['values']['language'] : $language->language;
+    $lang = $language->language;
   }
 
   $container = pane_load_container($delta, $lang);
   $block = array();
 
   if (FALSE !== $container) {
+    $container_name = $container->name;
+
     $block['subject'] = filter_xss($container->title);
-    $block['content'] = array(
-      '#markup' => $container->render(),
-      '#prefix' => '<div class = "'. str_replace('_', '-', substr($container->name, 0, -12)) .'">',
-      '#suffix' => '</div>',
-    );
+    $block['content'] = $container->render();
   }
 
   return $block;
-}
-
-/**
- * Implements hook_block_configure
- *
- * @param string $delta
- *
- * @return array:
- */
-function pane_block_configure($delta = '') {
-  global $language;
-
-  $lang = LANGUAGE_NONE;
-
-  if (drupal_multilingual()) {
-    $lang = (TRUE === isset($form_state['values']['language'])) ? $form_state['values']['language'] : $language->language;
-  }
-
-  $container = pane_load_container($delta, $lang);
-
-  $form = array();
-
-  if (FALSE !== $container) {
-    // Set to a child to avoid issues with #tree
-    $form['pane'] = $container->data_edit_form_wrapper();
-  }
-
-  return $form;
-}
-
-/**
- * Implements hook_block_save
- *
- * @param string $delta
- * @param array $edit
- */
-function pane_block_save($delta = '', $edit = array()) {
-  $container = pane_load_container($delta);
-
-  if (FALSE !== $container) {
-    $form_state = array('values' => $edit);
-    
-    // Merge pane values into form_state because of #tree issues
-    $form_state['values'] += $edit['pane'];
-    
-    // Make it look like we're inside CTools
-    $form_state['process_input'] = TRUE;
-    
-    $form = array();
-
-    // Manually trigger the validate function in case it needs to actually make changes
-    $container->data_edit_form_validate($form, $form_state);
-    $container->data_edit_form_wrapper_submit($form, $form_state);
-    $container->save_data();
-  }
 }
 
 /**
@@ -321,13 +291,25 @@ function _pane_get_class($plugin) {
 /**
  * Returns an array of available custom translatable panes
  *
+ * @param boolean $filtered
+ *   Whether we should filter by user permissions.
  * @param boolean $load_data
- *   Whether we should load the data along with the container
- *   
+ *   Whether we should load the data along with the container.
+ *
  * @return array
  */
-function pane_get_containers($load_data = FALSE) {
-  return pane_load_container(NULL, LANGUAGE_NONE, $load_data);
+function pane_get_containers($filtered = TRUE, $load_data = FALSE) {
+  $containers = pane_load_container(NULL, LANGUAGE_NONE, $load_data);
+
+  if ($filtered) {
+    foreach ($containers as $delta => $container) {
+      if (!user_access("pane $container->name update")) {
+        unset($containers[$delta]);
+      }
+    }
+  }
+
+  return $containers;
 }
 
 /**
@@ -354,8 +336,9 @@ function pane_load_container($name = NULL, $lang = LANGUAGE_NONE, $load_data = T
     if (TRUE === isset($presets[$name])) {
       $container = (TRUE === $load_data) ? pane_get_data($presets[$name], $lang) : $presets[$name];
     }
-    
+
     return $container;
+
   }
   else {
     $containers = array();
@@ -366,6 +349,13 @@ function pane_load_container($name = NULL, $lang = LANGUAGE_NONE, $load_data = T
 
     return $containers;
   }
+}
+
+/**
+ * Menu auto-loader callback.
+ */
+function pane_load($name) {
+  return pane_load_container($name);
 }
 
 /**
@@ -412,22 +402,52 @@ function pane_delete_container($container) {
 function pane_change_language(&$form, &$form_state) {
   $form_state['rebuild'] = TRUE;
 
-  // If we're editing through the block interface we have to reload the container
-  // to get the edits to the form state to work since we don't have that through
-  // hook_block_configure
-  if (TRUE === isset($form_state['values']['delta'])) {
-    global $language;
+  global $language;
 
-    $lang = LANGUAGE_NONE;
+  $lang = LANGUAGE_NONE;
 
-    if (drupal_multilingual()) {
-      $lang = (TRUE === isset($form_state['values']['language'])) ? $form_state['values']['language'] : $language->language;
-    }
+  if (drupal_multilingual()) {
+    $lang = (TRUE === isset($form_state['values']['language'])) ? $form_state['values']['language'] : $language->language;
+  }
 
-    $container = pane_load_container($form_state['values']['delta'], $lang);
+  $container = pane_load_container($form_state['values']['pane_container'], $lang);
 
-    if (FALSE !== $container) {
-      $container->data_edit_form_wrapper($form, $form_state);
+  if (FALSE !== $container) {
+    $container->data_edit_form_wrapper($form, $form_state);
+  }
+}
+
+/**
+ * Access callback for pane listing.
+ */
+function pane_list_access() {
+  // Grant access view access if the user has access administer or view rights.
+  $permissions = array('administer panes', 'view panes');
+  foreach ($permissions as $permission) {
+    if (user_access($permission)) {
+      return TRUE;
     }
   }
+  return FALSE;
+}
+
+/**
+ * Access callback for pane editing.
+ */
+function pane_edit_access($pane) {
+  return user_access('administer panes') || user_access("pane $pane->container update");
+}
+
+/**
+ * Implements hook_theme
+ */
+function pane_theme($existing, $type, $theme, $path) {
+  $items = array(
+  	'pane_access_denied' => array(
+  	  'template' => 'pane-access-denied',
+  	  'variables' => array('pane' => NULL)
+    ),
+  );
+  
+  return $items;
 }

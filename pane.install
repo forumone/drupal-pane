@@ -115,3 +115,13 @@ function pane_update_7201() {
 function pane_update_7202() {
   db_change_field('pane_data', 'lang', 'lang', array('length' => 15, 'type' => 'varchar'));
 }
+
+/**
+ * Remove 'administer pane settings' permission.
+ */
+function pane_update_7203() {
+  foreach (user_roles() as $name) {
+    $role = user_role_load_by_name($name);
+    user_role_revoke_permissions($role->rid, array('administer pane settings'));
+  }
+}

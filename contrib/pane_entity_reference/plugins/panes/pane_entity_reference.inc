@@ -13,6 +13,8 @@ class pane_entity_reference extends pane_base {
    * @return array
    */
   public function data_edit_form($form = array(), &$form_state = array()) {
+    $form = parent::data_edit_form($form, $form_state);
+
     $entity_type = $this->configuration['entity'];
 
     $form['references'] = array(
@@ -171,7 +173,7 @@ class pane_entity_reference extends pane_base {
    * @see pane_base::data_edit_form_submit()
    */
   public function data_edit_form_submit(&$form, &$form_state) {
-    $this->data = (TRUE === isset($form_state['values']['entity_ids'])) ? array('ids' => $form_state['values']['entity_ids']) : array();
+    $this->data = isset($form_state['values']['entity_ids']) ? array('ids' => $form_state['values']['entity_ids']) : array();
   }
 
   /**
@@ -182,7 +184,7 @@ class pane_entity_reference extends pane_base {
    * @return string
    */
   public function render() {
-    $markup = '';
+    $render = array();
     $entities = array();
     $output_mode = (TRUE === isset($this->configuration['output_mode'])) ? $this->configuration['output_mode'] : self::OUTPUT_DISPLAY_MODE;
 
@@ -230,14 +232,15 @@ class pane_entity_reference extends pane_base {
       }
     }
 
-    // Render using the appropriate output mode
+    // Render using the appropriate output mode.
+    $render = parent::render();
     switch ($output_mode) {
       case self::OUTPUT_DISPLAY_MODE:
-        $markup = $this->render_display_mode($entities);
+        $render += $this->render_display_mode($entities);
         break;
 
       case self::OUTPUT_VIEW:
-        $markup = $this->render_view($entities);
+        $render += $this->render_view($entities);
         break;
     }
 
@@ -253,7 +256,7 @@ class pane_entity_reference extends pane_base {
 
       $more_link_text = $this->configuration['more_link_text'];
       if (empty($more_link_text)) $more_link_text = 'View more';
-      $markup['more_link'] = array(
+      $render['more_link'] = array(
         '#link_text' => $more_link_text,
         '#accessible_text' => $this->configuration['view']['args'],
         '#path' => $url['path'],
@@ -263,9 +266,7 @@ class pane_entity_reference extends pane_base {
       );
     }
 
-    if (is_array($markup)) $markup = render($markup);
-
-    return $markup;
+    return $render;
   }
 
   /**
@@ -323,7 +324,13 @@ class pane_entity_reference extends pane_base {
       }
     }
 
-    $entity = (TRUE === isset($this->configuration['entity'])) ? $this->configuration['entity'] : array_shift(array_keys($entities));
+    if (TRUE === isset($this->configuration['entity'])) {
+      $entity = $this->configuration['entity'];
+    }
+    else {
+      $entity_types = array_keys($entities);
+      $entity = array_shift($entity_types);
+    }
 
     $form['multiplicity'] = array(
       '#type' => 'select',
@@ -338,7 +345,7 @@ class pane_entity_reference extends pane_base {
       '#default_value' => $mode,
       '#ajax' => array(
         'callback' => 'pane_plugin_change_ajax',
-        'wrapper' => $this->container . '-config',
+        'wrapper' => 'pane-config',
       ),
       '#options' => array(
         self::BY_BUNDLE => t('Filter by bundle'),
@@ -353,7 +360,7 @@ class pane_entity_reference extends pane_base {
       '#options' => $entities,
       '#ajax' => array(
         'callback' => 'pane_plugin_change_ajax',
-        'wrapper' => $this->container . '-config',
+        'wrapper' => 'pane-config',
       ),
     );
 
@@ -373,7 +380,7 @@ class pane_entity_reference extends pane_base {
       '#default_value' => $output_mode,
       '#ajax' => array(
         'callback' => 'pane_plugin_change_ajax',
-        'wrapper' => $this->container . '-config',
+        'wrapper' => 'pane-config',
       ),
       '#options' => array(
         self::OUTPUT_DISPLAY_MODE => t('Display mode'),
@@ -560,44 +567,44 @@ class pane_entity_reference extends pane_base {
   public function container_edit_form_submit(&$form_state) {
     $configuration = array();
 
-    if (TRUE === isset($form_state['values'][$this->container]['configuration']['mode'])) {
-      $configuration['mode'] = $form_state['values'][$this->container]['configuration']['mode'];
+    if (TRUE === isset($form_state['values']['configuration']['mode'])) {
+      $configuration['mode'] = $form_state['values']['configuration']['mode'];
     }
 
-    if (TRUE === isset($form_state['values'][$this->container]['configuration']['entity'])) {
-      $configuration['entity'] = $form_state['values'][$this->container]['configuration']['entity'];
+    if (TRUE === isset($form_state['values']['configuration']['entity'])) {
+      $configuration['entity'] = $form_state['values']['configuration']['entity'];
     }
 
-    if (TRUE === isset($form_state['values'][$this->container]['configuration']['target_bundles'])) {
-      $configuration['target_bundles'] = array_filter($form_state['values'][$this->container]['configuration']['target_bundles']);
+    if (TRUE === isset($form_state['values']['configuration']['target_bundles'])) {
+      $configuration['target_bundles'] = array_filter($form_state['values']['configuration']['target_bundles']);
     }
 
-    if (TRUE === isset($form_state['values'][$this->container]['configuration']['multiplicity'])) {
-      $configuration['multiplicity'] = (int) $form_state['values'][$this->container]['configuration']['multiplicity'];
+    if (TRUE === isset($form_state['values']['configuration']['multiplicity'])) {
+      $configuration['multiplicity'] = (int) $form_state['values']['configuration']['multiplicity'];
     }
 
-    if (TRUE === isset($form_state['values'][$this->container]['configuration']['more_link'])) {
-      $configuration['more_link'] = $form_state['values'][$this->container]['configuration']['more_link'];
+    if (TRUE === isset($form_state['values']['configuration']['more_link'])) {
+      $configuration['more_link'] = $form_state['values']['configuration']['more_link'];
     }
 
-    if (TRUE === isset($form_state['values'][$this->container]['configuration']['more_link_text'])) {
-      $configuration['more_link_text'] = $form_state['values'][$this->container]['configuration']['more_link_text'];
+    if (TRUE === isset($form_state['values']['configuration']['more_link_text'])) {
+      $configuration['more_link_text'] = $form_state['values']['configuration']['more_link_text'];
     }
 
-    if (TRUE === isset($form_state['values'][$this->container]['configuration']['view_mode'])) {
-      $configuration['view_mode'] = (string) $form_state['values'][$this->container]['configuration']['view_mode'];
+    if (TRUE === isset($form_state['values']['configuration']['view_mode'])) {
+      $configuration['view_mode'] = (string) $form_state['values']['configuration']['view_mode'];
     }
 
-    if (TRUE === isset($form_state['values'][$this->container]['configuration']['view'])){
-      $configuration['view'] = $form_state['values'][$this->container]['configuration']['view'];
+    if (TRUE === isset($form_state['values']['configuration']['view'])){
+      $configuration['view'] = $form_state['values']['configuration']['view'];
     }
 
-    if (TRUE === isset($form_state['values'][$this->container]['configuration']['output_mode'])) {
-      $configuration['output_mode'] = $form_state['values'][$this->container]['configuration']['output_mode'];
+    if (TRUE === isset($form_state['values']['configuration']['output_mode'])) {
+      $configuration['output_mode'] = $form_state['values']['configuration']['output_mode'];
     }
 
-    if (TRUE === isset($form_state['values'][$this->container]['configuration']['display_view'])) {
-      $configuration['display_view'] = $form_state['values'][$this->container]['configuration']['display_view'];
+    if (TRUE === isset($form_state['values']['configuration']['display_view'])) {
+      $configuration['display_view'] = $form_state['values']['configuration']['display_view'];
     }
 
     if (FALSE === empty($configuration)) {

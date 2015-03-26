@@ -1,170 +1,245 @@
 <?php
 /**
- * List Panes form
- *
- * @param array $form
- * @param array $form_state
- * @return array
+ * List Panes form callback.
  */
 function pane_panes_list($form, &$form_state) {
+  $header = array(
+    'title' => array('data' => t('Title')),
+    'plugin' => array('data' => t('Type')),
+    'description' => array('data' => t('Description')),
+    'operations' => array('data' => t('Operations')),
+  );
+
+  $plugins = pane_registry();
+
+  $per_page = 10;
+  $panes = pane_get_containers();
+  $total = count($panes);
+  $current_page = pager_default_initialize($total, $per_page, $element = 0);
+  $chunks = array_chunk($panes, $per_page, TRUE);
+
+  $rows = array();
+  if (!empty($chunks)) {
+    foreach ($chunks[$current_page] as $pane) {
+      $rows[$pane->name] = array(
+        'title' => filter_xss($pane->title),
+        'plugin' => $plugins[$pane->plugin]['title'],
+        'description' => check_plain($pane->description),
+        'operations' => l(t('configure'), "admin/structure/pane/$pane->name/configure") . ' | ' . l(t('edit content'), "admin/structure/pane/$pane->name/edit"),
+      );
+    }
+  }
+
+  $form['table'] = array(
+    '#theme' => 'table',
+    '#header' => $header,
+    '#rows' => $rows,
+    '#empty' => t('There are no panes.'),
+  );
+
+  $form['pager'] = array(
+    '#theme' => 'pager',
+    '#quantity' => $total,
+  );
+
+  return $form;
+}
+
+/**
+ * Gets the configuration form for the pane.
+ */
+function pane_panes_configure($form, $form_state, $pane = NULL) {
   $form['#tree'] = TRUE;
 
-  $panes = pane_get_containers(TRUE);
-  $blanks = (TRUE === isset($form_state['blanks'])) ? $form_state['blanks'] : 0;
+  if (!$pane) {
+    // Load a temporary pane to get configuration.
+    $plugin = !empty($form_state['values']['plugin']) ? $form_state['values']['plugin'] : 'text';
+    $class = _pane_get_class($plugin);
+    $pane =  pane_instance($plugin);
+  }
+  elseif (!empty($form_state['values']['plugin'])) {
+    $class = _pane_get_class($form_state['values']['plugin']);
+  }
+  else {
+    $class = _pane_get_class($pane->plugin);
+  }
 
   $plugins = array();
-
   foreach (pane_registry() as $type => $pane_type) {
     $plugins[$type] = $pane_type['title'];
   }
 
-  $form_state['blanks'] = $blanks;
-
-  $pane_list = array();
-
-  $form['panes'] = array(
-    '#type' => 'vertical_tabs',
-    '#prefix' => '<div id="pane-panes">',
-    '#suffix' => '</div>',
-    '#blanks' => $blanks,
+  $container_name = $pane->container;
+  ctools_include('export');
+  $container = ctools_export_load_object('pane_container', 'names', array($container_name));
+  $container = isset($container[$container_name]) ? $container[$container_name] : new stdClass();
+  $form['title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Title'),
+    '#default_value' => isset($container->title) ? $container->title : '',
+    '#description' => t('The title of the pane as shown to the user.'),
   );
 
-  foreach ($panes as $pane) {
-    $pane_list[] = $pane->container;
+  $form['name'] = array(
+    '#type' => 'machine_name',
+    '#title' => t('Machine Name'),
+    '#description' => t('machine-friendly name.'),
+    '#size' => 32,
+    '#maxlength' => 32,
+    '#default_value' => $container_name,
+    '#disabled' => !empty($container_name),
+    '#machine_name' => array(
+      // The name of the source field that we will Take the User Friendly name
+      // from and convert it to Machine Friendly name.
+      'source' => array('title'),
+      'exists' => 'pane_machine_name_exists',
+    ),
+  );
 
-    $form[$pane->container] = array(
-      '#type' => 'fieldset',
-      '#title' => filter_xss($pane->title),
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-      '#group' => 'panes',
-    );
+  $form['description'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Description'),
+    '#default_value' => $pane->description,
+    '#description' => t('A brief description of your pane. Used as title on administration pages.'),
+    '#required' => TRUE,
+  );
 
-    $form[$pane->container]['title'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Name'),
-      '#default_value' => $pane->title,
-    );
+  $form['plugin'] = array(
+    '#type' => 'select',
+    '#title' => t('Type'),
+    '#default_value' => !empty($container_name) ? $pane->plugin : NULL,
+    '#options' => $plugins,
+    '#required' => TRUE,
+    '#ajax' => array(
+      'callback' => 'pane_plugin_change_ajax',
+      'wrapper' => 'pane-config',
+    ),
+  );
 
-    $form[$pane->container]['name'] = array(
-      '#type' => 'machine_name',
-      '#title' => t('Machine Name'),
-      '#description' => t('machine-friendly name.'),
-      '#size' => 32,
-      '#maxlength' => 32,
-      '#default_value' => $pane->container,
-      '#disabled' => TRUE,
-      '#machine_name' => array(
-        'source' => array($pane->container, 'title'), 	// the name of the source field that we will Take the User Friendly name from and convert it to Machine Friedly name
-        'exists' => 'pane_machine_name_exists',
-      ),
-    );
-
-    $form[$pane->container]['description'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Description'),
-      '#default_value' => $pane->description,
-    );
-
-    $form[$pane->container]['plugin'] = array(
-      '#type' => 'select',
-      '#title' => t('Type'),
-      '#default_value' => $pane->plugin,
-      '#options' => $plugins,
-      '#required' => TRUE,
-      '#ajax' => array(
-        'callback' => 'pane_plugin_change_ajax',
-        'wrapper' => $pane->container . '-config',
-      ),
-    );
-
-    // Load the configuration form for the pane plugin
-
-    $form[$pane->container] += pane_admin_get_configuration_form($pane, $form_state);
-
-    $form[$pane->container]['remove'] = array(
+  if (user_access('administer panes')) {
+    $form['remove'] = array(
       '#type' => 'checkbox',
-      '#title' => t('Remove this pane type'),
+      '#title' => t('Remove this pane'),
       '#description' => t('NOTE: Be sure this pane is no longer in use on your site before removing'),
-      '#default_value' => false,
+      '#default_value' => FALSE,
     );
   }
 
-  for ($i = 0; $i < $blanks; $i++) {
-    $form['blank' . $i] = array(
-      '#type' => 'fieldset',
-      '#title' => t('New pane'),
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-      '#group' => 'panes',
-    );
+  $form['configuration'] = array(
+    '#type' => 'fieldset',
+    '#collapsed' => FALSE,
+    '#collapsible' => FALSE,
+    '#title' => t('Configuration'),
+    '#prefix' => '<div id="pane-config">',
+    '#suffix' => '</div>',
+  );
 
-    $form['blank' . $i]['title'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Name'),
-      '#default_value' => '',
+  $container = new $class();
+  $container->setContainer(!empty($container_name) ? $container_name : 'new');
+  $container->setConfiguration($pane->configuration);
+  $container->container_edit_form_submit($form_state);
+  $edit_form = $container->container_edit_form($form_state);
+  if (!empty($edit_form)) {
+    foreach ($container->container_edit_form($form_state) as $id => $form_item) {
+      $form['configuration'][$id] = $form_item;
+    }
+  }
+  else {
+    $form['configuration'] = array(
+      '#markup' => '<div id="pane-config"></div>',
     );
-
-    $form['blank' . $i]['name'] = array(
-      '#type' => 'machine_name',
-      '#title' => t('Machine Name'),
-      '#description' => t('machine-friendly name.'),
-      '#size' => 32,
-      '#maxlength' => 32,
-      '#default_value' => '',
-      '#machine_name' => array(
-        'source' => array('blank' . $i, 'title'), 	// the name of the source field that we will Take the User Friendly name from and convert it to Machine Friedly name
-        'exists' => 'pane_machine_name_exists',
-      ),
-    );
-
-    $form['blank' . $i]['description'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Description'),
-      '#default_value' => '',
-    );
-
-    $form['blank' . $i]['plugin'] = array(
-      '#type' => 'select',
-      '#title' => t('Type'),
-      '#default_value' => '',
-      '#options' => $plugins,
-      '#required' => TRUE,
-      '#ajax' => array(
-        'callback' => 'pane_plugin_change_ajax',
-        'wrapper' => 'blank' . $i . '-config',
-      ),
-    );
-
-    // Load the configuration form for the pane plugin
-    $tmp_pane = pane_instance(array_shift(array_keys($plugins)));
-    $tmp_pane->setContainer('blank' . $i);
-    $form['blank' . $i] += pane_admin_get_configuration_form($tmp_pane, $form_state);
   }
 
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Save Configuration'),
   );
-
-  $form['add'] = array(
+  $form['cancel'] = array(
     '#type' => 'submit',
-    '#value' => t('Add Pane'),
-    '#submit' => array('pane_panes_add'),
-    '#name' => 'add_more',
-    '#ajax' => array(
-      'callback' => 'pane_panes_add_ajax',
-      'effect' => 'fade',
-      'wrapper' => 'pane-panes',
-    ),
-  );
-
-  $form['pane_list'] = array(
-    '#type' => 'value',
-    '#value' => $pane_list,
+    '#value' => 'Cancel',
+    '#submit' => array('pane_panes_goto'),
+    '#limit_validation_errors' => array(),
   );
 
   return $form;
+}
+
+/**
+ * Submit handler for pane configuration form.
+ */
+function pane_panes_configure_submit($form, &$form_state) {
+  $container = pane_instance($form_state['values']['plugin']);
+  $pane_id = $form_state['values']['name'];
+  $container->setContainer($pane_id)->container_edit_form_submit($form_state);
+
+  $pane = new stdClass();
+  $pane->name = $form_state['values']['name'];
+  $pane->title = $form_state['values']['title'];
+  $pane->description = $form_state['values']['description'];
+  $pane->plugin = $form_state['values']['plugin'];
+  $pane->configuration = $container->configuration;
+
+  if ($form_state['values']['remove']) {
+    pane_delete_container($pane);
+  }
+  else {
+    pane_save_container($pane);
+  }
+
+  pane_panes_goto($form, $form_state);
+}
+
+/**
+ * Gets the content edit form for the pane.
+ */
+function pane_panes_edit($form, $form_state, $pane) {
+  drupal_set_title("Panes: $pane->description");
+
+  global $language;
+
+  $lang = LANGUAGE_NONE;
+
+  if (drupal_multilingual()) {
+    $lang = (TRUE === isset($form_state['values']['language'])) ? $form_state['values']['language'] : $language->language;
+  }
+
+  $container = pane_load_container($pane->container, $lang);
+  $form = $container->data_edit_form_wrapper($form, $form_state);
+  $form['pane_container'] = array(
+    '#type' => 'hidden',
+    '#value' => $pane->container,
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save Content'),
+  );
+  $form['cancel'] = array(
+    '#type' => 'submit',
+    '#value' => 'Cancel',
+    '#submit' => array('pane_panes_goto'),
+    '#limit_validation_errors' => array(),
+  );
+
+  return $form;
+}
+
+/**
+ * Validation handler for pane content editing.
+ */
+function pane_panes_edit_validate(&$form, &$form_state) {
+  $container = pane_load_container($form_state['values']['pane_container']);
+  $container->data_edit_form_validate($form, $form_state);
+}
+
+/**
+ * Submit handler for pane content editing.
+ */
+function pane_panes_edit_submit(&$form, &$form_state) {
+  $container = pane_load_container($form_state['values']['pane_container']);
+  $container->data_edit_form_wrapper_submit($form, $form_state);
+  $container->save_data();
+
+  pane_panes_goto($form, $form_state);
 }
 
 /**
@@ -179,124 +254,16 @@ function pane_machine_name_exists($value) {
   return (FALSE != $container);
 }
 
-/**
- * AJAX form callback
- *
- * @param array $form
- * @param array $form_state
- * @return array
- */
-function pane_panes_add_ajax($form, $form_state) {
-  $form['panes']['#blanks'] += 1;
-  return $form['panes'];
-}
-
 function pane_plugin_change_ajax($form, &$form_state) {
-  $container_name = $form_state['triggering_element']['#array_parents'][0];
-
-  return $form[$container_name]['configuration'];
+  return $form['configuration'];
 }
 
-/**
- * AJAX callback to add a new Pane
- *
- * @param array $form
- * @param array $form_state
- */
-function pane_panes_add($form, &$form_state) {
-  $form_state['blanks'] += 1;
-  $form_state['rebuild'] = TRUE;
-}
-
-function pane_pane_delete(&$form, &$form_state) {
-
-}
-
-/**
- * Submit handler for pane editing
- *
- * @param array $form
- * @param array $form_state
- */
-function pane_panes_list_submit($form, &$form_state) {
-  // First save any Panes we know about
-  foreach ($form_state['values']['pane_list'] as $pane_id) {
-
-
-    $container = pane_instance($form_state['values'][$pane_id]['plugin']);
-    $container->setContainer($pane_id)->container_edit_form_submit($form_state);
-
-    $pane = new stdClass();
-    $pane->name = $form_state['values'][$pane_id]['name'];
-    $pane->title = $form_state['values'][$pane_id]['title'];
-    $pane->description = $form_state['values'][$pane_id]['description'];
-    $pane->plugin = $form_state['values'][$pane_id]['plugin'];
-    $pane->configuration = $container->configuration;
-
-    if ($form_state['values'][$pane_id]['remove']) {
-      pane_delete_container($pane);
-    }
-    else {
-      pane_save_container($pane);
-    }
+function pane_panes_goto($form, &$form_state) {
+  if (!empty($_GET['destination'])) {
+    $destination = $_GET['destination'];
   }
-
-  // And now save any blank ones
-  for ($i = 0; $i < $form['panes']['#blanks']; $i++) {
-    $container = pane_instance($form_state['values']['blank' . $i]['plugin']);
-    $container->setContainer('blank' . $i)->container_edit_form_submit($form_state);
-
-    $pane = new stdClass();
-    $pane->name = $form_state['values']['blank' . $i]['name'];
-    $pane->title = $form_state['values']['blank' . $i]['title'];
-    $pane->description = $form_state['values']['blank' . $i]['description'];
-    $pane->plugin = $form_state['values']['blank' . $i]['plugin'];
-    $pane->configuration = $container->configuration;
-
-    pane_save_container($pane);
+  else {
+    $destination = 'admin/structure/pane';
   }
-}
-
-/**
- * Gets the configuration form for the pane
- *
- * TODO: Refactor this to avoid needless loading
- *
- * @param pane_base $pane
- * @param array $form_state
- * @return array
- */
-function pane_admin_get_configuration_form($pane, &$form_state) {
-  $form = array();
-
-  $form['configuration'] = array(
-    '#type' => 'fieldset',
-    '#collapsed' => FALSE,
-    '#collapsible' => FALSE,
-    '#title' => t('Configuration'),
-    '#prefix' => '<div id="' . $pane->container . '-config">',
-    '#suffix' => '</div>',
-  );
-
-  $plugin = (TRUE === isset($form_state['values'][$pane->container]['plugin'])) ? $form_state['values'][$pane->container]['plugin'] : $pane->plugin;
-  $class = _pane_get_class($plugin);
-
-  $container = new $class();
-
-  // Load a temporary pane to get configuration
-  $temp_pane = pane_load_container($pane->container);
-
-  $container->setContainer($pane->container);
-
-  if (FALSE != $temp_pane) {
-    $container->setConfiguration($temp_pane->configuration);
-  }
-
-  $container->container_edit_form_submit($form_state);
-
-  foreach ($container->container_edit_form($form_state) as $id => $form_item) {
-    $form['configuration'][$id] = $form_item;
-  }
-
-  return $form;
+  drupal_goto($destination);
 }
