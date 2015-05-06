@@ -101,6 +101,11 @@ function pane_pane_content_type_render($subtype_id, $conf, $args, $contexts) {
   
   $block->content = $render;
   
+  // Invoke rules
+  if (module_exists('rules')) {
+    rules_invoke_event('pane_view', $pane);
+  }
+
   return $block;
 }
 

@@ -124,6 +124,11 @@ abstract class pane_base {
     $current_data->container = $this->container;
     $current_data->lang = $this->lang;
 
+    // Invoke rules
+    if (module_exists('rules')) {
+      rules_invoke_event('pane_update', $this);
+    }
+
     ctools_export_crud_save('pane_data', $current_data);
 
     return $this;

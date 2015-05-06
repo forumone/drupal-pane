@@ -218,6 +218,11 @@ function pane_block_view($delta = '') {
 
     $block['subject'] = filter_xss($container->title);
     $block['content'] = $container->render();
+
+    // Invoke rules
+    if (module_exists('rules')) {
+      rules_invoke_event('pane_view', $container);
+    }
   }
 
   return $block;
