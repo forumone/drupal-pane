@@ -309,7 +309,7 @@ function pane_get_containers($filtered = TRUE, $load_data = FALSE) {
 
   if ($filtered) {
     foreach ($containers as $delta => $container) {
-      if (!user_access("pane $container->name update")) {
+      if (!user_access('administer panes') && !user_access("pane $container->name update")) {
         unset($containers[$delta]);
       }
     }
