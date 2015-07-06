@@ -258,7 +258,7 @@ class pane_entity_reference extends pane_base {
       if (empty($more_link_text)) $more_link_text = 'View more';
       $render['more_link'] = array(
         '#link_text' => $more_link_text,
-        '#accessible_text' => $this->configuration['view']['args'],
+        '#accessible_text' => (!empty($this->configuration['view']['args'])) ? $this->configuration['view']['args'] : $more_link_text,
         '#path' => $url['path'],
         '#query' => $query,
         '#fragment' => (!empty($url['fragment']) ? $url['fragment'] : ''),
