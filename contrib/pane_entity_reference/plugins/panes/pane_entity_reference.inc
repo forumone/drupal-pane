@@ -240,7 +240,7 @@ class pane_entity_reference extends pane_base {
         break;
 
       case self::OUTPUT_VIEW:
-        $render += $this->render_view($entities);
+        $render['#markup'] = $this->render_view($entities);
         break;
     }
 
