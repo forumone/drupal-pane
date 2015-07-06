@@ -10,6 +10,7 @@ function pane_menu() {
 
   $items['admin/structure/pane'] = array(
     'title' => 'Panes',
+    'description' => 'Add, edit and remove configurable custom Panes.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('pane_panes_list'),
     'access callback' => 'pane_list_access',
