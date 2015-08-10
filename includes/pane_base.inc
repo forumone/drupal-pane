@@ -264,7 +264,7 @@ abstract class pane_base {
       $form['language'] = array(
         '#type' => 'select',
         '#title' => t('Language'),
-        '#options' => locale_language_list(),
+        '#options' => array(LANGUAGE_NONE => t('Language neutral')) + locale_language_list(),
         '#default_value' => $lang,
         '#attributes' => array('class' => array('ctools-auto-submit')),
       );

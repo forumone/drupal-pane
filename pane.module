@@ -249,6 +249,13 @@ function pane_get_data($container, $lang = LANGUAGE_NONE) {
     ->setConfiguration($container->configuration)
     ->load_data();
 
+  // If we didn't get any data localized to the given language, check for language-neutral data.
+  if (LANGUAGE_NONE != $lang && NULL === $plugin->data) {
+    $lang = LANGUAGE_NONE;
+    $plugin->setLang($lang)
+      ->load_data();
+  }
+
   return $plugin;
 }
 
@@ -338,7 +345,7 @@ function pane_load_container($name = NULL, $lang = LANGUAGE_NONE, $load_data = T
   if (NULL !== $name) {
     $presets = ctools_export_load_object('pane_container', 'names', array($name));
     $container = FALSE;
-    
+
     if (TRUE === isset($presets[$name])) {
       $container = (TRUE === $load_data) ? pane_get_data($presets[$name], $lang) : $presets[$name];
     }
