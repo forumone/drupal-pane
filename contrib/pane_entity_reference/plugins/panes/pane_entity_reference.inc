@@ -677,7 +677,7 @@ class pane_entity_reference extends pane_base {
     $results = $query->execute();
 
     // Now that we have the matches let's compare them to the IDs we have in configuration
-    $keys = array_keys($results[$entity_type]);
+    $keys = ($results) ? array_keys($results[$entity_type]) : array();
     $ids = array_intersect($ids, $keys);
 
     $output = array();
