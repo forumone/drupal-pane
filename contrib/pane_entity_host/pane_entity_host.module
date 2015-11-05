@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Implements hook_pane_plugins
  *
@@ -6,32 +7,83 @@
  */
 function pane_entity_host_pane_plugins() {
   $plugins = array();
-
+  
   $plugins['pane_entity_host'] = array(
     'handler' => array(
       'path' => drupal_get_path('module', 'pane_entity_host') . '/plugins/panes',
       'file' => 'pane_entity_host.inc',
       'class' => 'pane_entity_host',
-      'parent' => 'pane_base',
-    ),
+      'parent' => 'pane_base'
+    )
   );
-
+  
   return $plugins;
 }
 
 /**
  * Implements hook_pane_registry
- * 
+ *
  * @return array
  */
 function pane_entity_host_pane_registry() {
   $registry = array();
-
+  
   $registry['entity_host'] = array(
     'title' => t('Entity host'),
     'description' => t('Entity host'),
-    'plugin' => 'pane_entity_host',
+    'plugin' => 'pane_entity_host'
   );
-
+  
   return $registry;
+}
+
+function pane_entity_host_pane_entity_host_plugins() {
+  $plugins = array();
+  
+  $plugins['entity_host_base'] = array(
+    'handler' => array(
+      'path' => drupal_get_path('module', 'pane_entity_host') . '/includes',
+      'file' => 'entity_host_base.inc',
+      'class' => 'entity_host_base',
+    )
+  );
+  
+  $plugins['fieldable_panels_pane'] = array(
+    'handler' => array(
+      'path' => drupal_get_path('module', 'pane_entity_host') . '/plugins/entity_hosts',
+      'file' => 'entity_host_fieldable_panels_pane.inc',
+      'class' => 'entity_host_fieldable_panels_pane',
+      'parent' => 'entity_host_base',
+    )
+  );
+  
+  $plugins['node'] = array(
+    'handler' => array(
+      'path' => drupal_get_path('module', 'pane_entity_host') . '/plugins/entity_hosts',
+      'file' => 'entity_host_node.inc',
+      'class' => 'entity_host_node',
+      'parent' => 'entity_host_base',
+    )
+  );
+  
+  $plugins['entity_api'] = array(
+    'handler' => array(
+      'path' => drupal_get_path('module', 'pane_entity_host') . '/plugins/entity_hosts',
+      'file' => 'entity_host_entity_api.inc',
+      'class' => 'entity_host_entity_api',
+      'parent' => 'entity_host_base',
+    )
+  );
+  
+  return $plugins;
+}
+
+function pane_entity_host_ctools_plugin_type() {
+  return array(
+    'plugins' => array(
+      'cache' => TRUE,
+      'use hooks' => TRUE,
+      'classes' => array('handler'),
+    ),
+  );
 }
